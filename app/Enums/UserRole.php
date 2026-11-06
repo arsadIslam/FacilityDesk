@@ -59,10 +59,25 @@ enum UserRole: string
                 Permission::ViewSites,
                 Permission::ViewCategories,
                 Permission::ViewSlaPolicies,
+                Permission::ViewAssets,
+                Permission::ViewAllWorkOrders,
+                Permission::CreateWorkOrders,
+                Permission::AssignWorkOrders,
+                Permission::WorkOnWorkOrders,
+                Permission::CloseWorkOrders,
+                Permission::CancelWorkOrders,
+                Permission::InternalComments,
             ],
-            // Work-order permissions for these two arrive in Phase 3.
-            self::Technician => [],
-            self::ClientUser => [],
+            // Technicians scan asset QR codes on site.
+            self::Technician => [
+                Permission::ViewAssets,
+                Permission::WorkOnWorkOrders,
+                Permission::InternalComments,
+            ],
+            self::ClientUser => [
+                Permission::CreateWorkOrders,
+                Permission::CloseWorkOrders,
+            ],
         };
     }
 }

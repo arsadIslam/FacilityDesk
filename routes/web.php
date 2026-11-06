@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Web\AssetController;
+use App\Http\Controllers\Web\AttachmentController;
 use App\Http\Controllers\Web\Auth\EmailVerificationController;
 use App\Http\Controllers\Web\Auth\LoginController;
 use App\Http\Controllers\Web\Auth\PasswordResetController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\Web\SiteCoverageController;
 use App\Http\Controllers\Web\SlaPolicyController;
 use App\Http\Controllers\Web\TenantSignupController;
 use App\Http\Controllers\Web\UserController;
+use App\Livewire\WorkOrders;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -75,6 +78,14 @@ Route::domain('{tenant}.'.config('tenancy.domain'))
             Route::middleware('verified')->group(function () {
                 Route::get('/', DashboardController::class)->name('dashboard');
 
+                Route::get('/work-orders', WorkOrders\Index::class)->name('work-orders.index');
+                Route::get('/work-orders/create', WorkOrders\Create::class)->name('work-orders.create');
+                Route::get('/work-orders/{workOrder}', WorkOrders\Show::class)->name('work-orders.show');
+
+                Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])
+                    ->middleware('signed')
+                    ->name('attachments.show');
+
                 Route::resource('users', UserController::class)->except(['show', 'destroy']);
                 Route::post('/users/{user}/invitation', [UserController::class, 'resendInvitation'])->name('users.invitation');
                 Route::patch('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
@@ -87,6 +98,12 @@ Route::domain('{tenant}.'.config('tenancy.domain'))
                 Route::resource('sites.locations', LocationController::class)
                     ->only(['store', 'edit', 'update', 'destroy'])
                     ->scoped();
+
+                Route::resource('assets', AssetController::class);
+                Route::get('/assets/{asset}/label', [AssetController::class, 'label'])->name('assets.label');
+                // Target of the printed QR code. Bound by token through the tenant scope,
+                // so another tenant's token is a 404 on this subdomain.
+                Route::get('/a/{asset:qr_token}', [AssetController::class, 'scan'])->name('assets.scan');
 
                 Route::resource('categories', CategoryController::class)->except(['show', 'destroy']);
 

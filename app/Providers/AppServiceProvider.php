@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Auth\TenantPasswordBrokerManager;
+use App\Models\Asset;
+use App\Models\Attachment;
 use App\Models\Category;
 use App\Models\Client;
 use App\Models\Location;
@@ -12,14 +14,20 @@ use App\Models\Site;
 use App\Models\SlaPolicy;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\WorkOrder;
+use App\Models\WorkOrderComment;
+use App\Notifications\Channels\TenantDatabaseChannel;
 use App\Services\TenantContext;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Notifications\Channels\DatabaseChannel;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 use LogicException;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +40,19 @@ class AppServiceProvider extends ServiceProvider
 
         // Reset tokens keyed by (tenant_id, email); see TenantDatabaseTokenRepository.
         $this->app->extend('auth.password', fn ($manager, Application $app) => new TenantPasswordBrokerManager($app));
+
+        // Database notifications carry tenant_id; see TenantDatabaseChannel.
+        $this->app->bind(DatabaseChannel::class, TenantDatabaseChannel::class);
+
+        // Must run before Livewire boots: once a "livewire.update" route exists,
+        // Livewire skips its default one, which has no domain and no tenant
+        // middleware and would hydrate components with no tenant in context.
+        $this->app->booting(fn () => Livewire::setUpdateRoute(
+            fn (array $handle) => Route::domain('{tenant}.'.config('tenancy.domain'))
+                ->middleware(['web', 'tenant', 'tenant.active', 'auth', 'active', 'verified'])
+                ->post('/livewire/update', $handle)
+                ->name('tenant.livewire.update'),
+        ));
     }
 
     public function boot(): void
@@ -46,6 +67,10 @@ class AppServiceProvider extends ServiceProvider
             'location' => Location::class,
             'category' => Category::class,
             'sla_policy' => SlaPolicy::class,
+            'work_order' => WorkOrder::class,
+            'work_order_comment' => WorkOrderComment::class,
+            'attachment' => Attachment::class,
+            'asset' => Asset::class,
         ]);
 
         $this->configureAuthLinks();

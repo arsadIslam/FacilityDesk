@@ -3,8 +3,10 @@
 @php
     $nav = [
         ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'can' => null],
+        ['label' => 'Work orders', 'route' => 'work-orders.index', 'active' => 'work-orders.*', 'can' => ['viewAny', App\Models\WorkOrder::class]],
         ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'can' => ['viewAny', App\Models\Client::class]],
         ['label' => 'Sites', 'route' => 'sites.index', 'active' => 'sites.*', 'can' => ['viewAny', App\Models\Site::class]],
+        ['label' => 'Assets', 'route' => 'assets.index', 'active' => 'assets.*', 'can' => ['viewAny', App\Models\Asset::class]],
         ['label' => 'Categories', 'route' => 'categories.index', 'active' => 'categories.*', 'can' => ['viewAny', App\Models\Category::class]],
         ['label' => 'SLA policies', 'route' => 'sla-policies.index', 'active' => 'sla-policies.*', 'can' => ['viewAny', App\Models\SlaPolicy::class]],
         ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'can' => ['viewAny', App\Models\User::class]],
@@ -19,6 +21,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ? $title.' · ' : '' }}{{ $tenant?->name ?? config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
     <header class="border-b border-slate-200 bg-white">
@@ -41,6 +44,7 @@
                 </nav>
             </div>
             <div class="flex items-center gap-3 text-sm">
+                <livewire:notification-bell />
                 <span class="text-slate-600">{{ auth()->user()->name }}</span>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -54,5 +58,6 @@
         <x-flash />
         {{ $slot }}
     </main>
+    @livewireScripts
 </body>
 </html>

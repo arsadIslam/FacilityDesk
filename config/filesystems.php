@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Attachments Disk
+    |--------------------------------------------------------------------------
+    |
+    | Work order photos and documents. "local" (storage/app/private) in
+    | development, "s3" (MinIO under Sail, S3 in production) otherwise. Never
+    | a public disk: files are served through a signed, authorised route.
+    |
+    */
+
+    'attachments_disk' => env('ATTACHMENTS_DISK', 'local'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

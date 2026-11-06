@@ -94,6 +94,19 @@ services:
                 - local
             retries: 3
             timeout: 5s
+    # Creates the private attachments bucket once MinIO is up, then exits.
+    createbuckets:
+        image: 'minio/mc:latest'
+        depends_on:
+            - minio
+        networks:
+            - sail
+        entrypoint: >
+            /bin/sh -c "
+            until /usr/bin/mc alias set local http://minio:9000 $${AWS_ACCESS_KEY_ID:-sail} $${AWS_SECRET_ACCESS_KEY:-password}; do sleep 1; done;
+            /usr/bin/mc mb --ignore-existing local/$${AWS_BUCKET:-facilitydesk};
+            exit 0;
+            "
 networks:
     sail:
         driver: bridge

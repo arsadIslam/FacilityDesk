@@ -92,6 +92,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<WorkOrder, $this>
+     */
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
+    }
+
+    /**
      * Supervisors and technicians who cover this site.
      *
      * @return BelongsToMany<User, $this>

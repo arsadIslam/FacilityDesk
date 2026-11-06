@@ -37,6 +37,21 @@ class SlaPolicy extends Model
         'resolution_minutes',
     ];
 
+    /**
+     * The current tenant's targets for $priority, falling back to the
+     * platform defaults if the tenant's row is missing.
+     *
+     * @return array{response: int, resolution: int}
+     */
+    public static function targetsFor(Priority $priority): array
+    {
+        $policy = static::query()->where('priority', $priority->value)->first();
+
+        return $policy === null
+            ? $priority->defaultSla()
+            : ['response' => $policy->response_minutes, 'resolution' => $policy->resolution_minutes];
+    }
+
     protected function casts(): array
     {
         return [
