@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
 use Closure;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Resolves the current tenant and stores it in TenantContext.
  *
  * Web: from the "{tenant}" subdomain route parameter.
- * Otherwise: from the authenticated user (no subdomain, e.g. the API).
+ * API ("tenant:sanctum"): from the user owning the bearer token. The guard
+ * is resolved here because this middleware runs before "auth:sanctum".
  *
  * Registered in the middleware priority list ahead of authentication and
  * SubstituteBindings (bootstrap/app.php), so the user lookup and every
@@ -26,9 +28,14 @@ final class IdentifyTenant
 {
     public function __construct(private readonly TenantContext $context) {}
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, ?string $guard = null): Response
     {
-        $tenant = $this->resolve($request);
+        $tenant = $this->resolve($request, $guard);
+
+        // No (valid) token: answer 401 as "auth:sanctum" would, not 404.
+        if ($tenant === null && $guard !== null && $request->user($guard) === null) {
+            throw new AuthenticationException('Unauthenticated.', [$guard]);
+        }
 
         abort_if($tenant === null, 404);
 
@@ -42,7 +49,7 @@ final class IdentifyTenant
         return $next($request);
     }
 
-    private function resolve(Request $request): ?Tenant
+    private function resolve(Request $request, ?string $guard): ?Tenant
     {
         $slug = $request->route('tenant');
 
@@ -50,7 +57,7 @@ final class IdentifyTenant
             return Tenant::query()->where('slug', $slug)->first();
         }
 
-        $user = $request->user();
+        $user = $request->user($guard);
 
         if ($user instanceof User && $user->tenant_id !== null) {
             return Tenant::query()->find($user->tenant_id);

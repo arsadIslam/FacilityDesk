@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property int $id
@@ -58,6 +60,7 @@ class WorkOrder extends Model
     /** @use HasFactory<WorkOrderFactory> */
     use HasFactory;
 
+    use LogsActivity;
     use SoftDeletes;
 
     /**
@@ -97,6 +100,19 @@ class WorkOrder extends Model
             'is_resolution_breached' => 'boolean',
             'client_rating' => 'integer',
         ];
+    }
+
+    /**
+     * Audit trail of what people change. SLA flags, due dates and other
+     * system-maintained columns are left out; the status timeline has the detail.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('work_orders')
+            ->logOnly(['title', 'description', 'priority', 'status', 'assigned_to', 'site_id', 'location_id', 'category_id', 'asset_id', 'resolution_note'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**

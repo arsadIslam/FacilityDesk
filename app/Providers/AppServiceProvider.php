@@ -10,6 +10,7 @@ use App\Models\Attachment;
 use App\Models\Category;
 use App\Models\Client;
 use App\Models\Location;
+use App\Models\Report;
 use App\Models\Site;
 use App\Models\SlaPolicy;
 use App\Models\Tenant;
@@ -20,13 +21,17 @@ use App\Notifications\Channels\TenantDatabaseChannel;
 use App\Services\TenantContext;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Channels\DatabaseChannel;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Livewire;
 use LogicException;
 
@@ -71,9 +76,27 @@ class AppServiceProvider extends ServiceProvider
             'work_order_comment' => WorkOrderComment::class,
             'attachment' => Attachment::class,
             'asset' => Asset::class,
+            'report' => Report::class,
         ]);
 
         $this->configureAuthLinks();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * API: 60 requests a minute per token (per IP before login); login: 5 a
+     * minute per IP to slow down credential stuffing.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            $user = $request->user();
+            $token = $user instanceof User ? $user->currentAccessToken() : null;
+
+            return Limit::perMinute(60)->by($token instanceof PersonalAccessToken ? 'token:'.$token->getKey() : 'ip:'.$request->ip());
+        });
+
+        RateLimiter::for('api-login', fn (Request $request) => Limit::perMinute(5)->by('login:'.$request->ip()));
     }
 
     /**

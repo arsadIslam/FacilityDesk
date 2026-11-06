@@ -6,6 +6,7 @@ namespace App\Actions\Users;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\RoleChangeLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -28,6 +29,7 @@ final class InviteUser
             $user->save();
 
             $user->assignRole($role->value);
+            RoleChangeLog::record($user, null, $role);
 
             return $user;
         });

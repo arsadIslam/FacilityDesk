@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Enums\WorkOrderStatus;
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\WorkOrderStatusHistoryFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -25,6 +27,9 @@ use Illuminate\Support\Carbon;
 class WorkOrderStatusHistory extends Model
 {
     use BelongsToTenant;
+
+    /** @use HasFactory<WorkOrderStatusHistoryFactory> */
+    use HasFactory;
 
     public const UPDATED_AT = null;
 

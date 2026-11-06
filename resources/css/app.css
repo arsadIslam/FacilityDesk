@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* The app has no dark theme: dark: classes (e.g. in Laravel's pagination view)
+   only apply under an explicit .dark class, never from the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';

@@ -1,0 +1,179 @@
+name: Authentication
+description: 'Tokens are per device. Send them as `Authorization: Bearer <token>`.'
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/auth/login
+    metadata:
+      custom: []
+      groupName: Authentication
+      groupDescription: 'Tokens are per device. Send them as `Authorization: Bearer <token>`.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Log in'
+      description: |-
+        Exchanges workspace, email and password for a bearer token. Limited to
+        5 attempts a minute per IP. Wrong workspace, email or password all give
+        the same answer, so the endpoint cannot be used to discover accounts.
+      authenticated: false
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      tenant:
+        custom: []
+        name: tenant
+        description: 'The workspace slug (the subdomain). Must not be greater than 60 characters.'
+        required: true
+        example: acme
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      email:
+        custom: []
+        name: email
+        description: 'Must be a valid email address.'
+        required: true
+        example: tech@acme.test
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      password:
+        custom: []
+        name: password
+        description: ''
+        required: true
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      device_name:
+        custom: []
+        name: device_name
+        description: "Shown in the user's list of signed-in devices. Must not be greater than 100 characters."
+        required: true
+        example: 'Pixel 8'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      tenant: acme
+      email: tech@acme.test
+      password: password
+      device_name: 'Pixel 8'
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"token":"1|aBcD\u2026","token_type":"Bearer","expires_at":"2026-06-03T10:00:00+00:00","user":{"id":7,"name":"Tom Tech","email":"tom@acme.test","phone":null,"role":"technician","client_id":null}}'
+        headers: []
+        description: ''
+      -
+        custom: []
+        status: 422
+        content: '{"message":"These credentials do not match our records.","errors":{"email":["These credentials do not match our records."]}}'
+        headers: []
+        description: ''
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/auth/logout
+    metadata:
+      custom: []
+      groupName: Authentication
+      groupDescription: 'Tokens are per device. Send them as `Authorization: Bearer <token>`.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Log out'
+      description: 'Revokes the token used for this request (other devices stay signed in).'
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 204
+        content: null
+        headers: []
+        description: ''
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/me
+    metadata:
+      custom: []
+      groupName: Authentication
+      groupDescription: 'Tokens are per device. Send them as `Authorization: Bearer <token>`.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Current user'
+      description: 'The signed-in user, their workspace and permissions.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"data":{"id":7,"name":"Tom Tech","email":"tom@acme.test","phone":null,"role":"technician","client_id":null,"tenant":{"id":1,"name":"Acme Facilities","slug":"acme","timezone":"Asia\/Kolkata"},"permissions":["work_orders.work","work_orders.internal_comments"]}}'
+        headers: []
+        description: ''
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null

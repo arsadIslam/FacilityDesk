@@ -80,7 +80,7 @@
             </x-card>
 
             @if ($canManage)
-                <form method="POST" action="{{ route('sites.destroy', $site) }}" onsubmit="return confirm('Delete {{ $site->name }}?')">
+                <form method="POST" action="{{ route('sites.destroy', $site) }}" data-confirm="Delete {{ $site->name }}?">
                     @csrf @method('DELETE')
                     <x-button variant="danger" class="w-full">Delete site</x-button>
                 </form>

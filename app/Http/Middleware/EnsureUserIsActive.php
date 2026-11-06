@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Ends the session of a user who was deactivated while logged in.
+ * Ends the session (web) or rejects the token (API) of a user who was
+ * deactivated after signing in.
  */
 final class EnsureUserIsActive
 {
@@ -20,6 +21,11 @@ final class EnsureUserIsActive
         $user = $request->user();
 
         if ($user instanceof User && ! $user->is_active) {
+            // API (token, no session): refuse; the token stops working too.
+            if (! $request->hasSession()) {
+                abort(403, 'Your account has been deactivated.');
+            }
+
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

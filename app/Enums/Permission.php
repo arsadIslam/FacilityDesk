@@ -29,6 +29,12 @@ enum Permission: string
     case ViewSlaPolicies = 'sla_policies.view';
     case ManageSlaPolicies = 'sla_policies.manage';
 
+    // Monthly client reports and the dashboard's tenant-wide numbers.
+    case ViewReports = 'reports.view';
+
+    // The audit log of work orders, users and roles.
+    case ViewAuditLog = 'audit.view';
+
     // Without this, a user only sees work orders they raised, are assigned
     // to, or (Client Users) that belong to their client.
     case ViewAllWorkOrders = 'work_orders.view_all';

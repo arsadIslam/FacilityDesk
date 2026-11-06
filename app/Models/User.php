@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -42,10 +45,13 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     use BelongsToTenant;
 
+    use HasApiTokens;
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasRoles;
+    use LogsActivity;
     use Notifiable;
     use SoftDeletes;
 
@@ -86,6 +92,19 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Profile and access changes; never the password or login timestamps.
+     * Role changes are pivot changes and are logged by the user actions.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('users')
+            ->logOnly(['name', 'email', 'phone', 'is_active', 'client_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**

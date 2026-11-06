@@ -6,6 +6,7 @@ namespace App\Actions\Users;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\RoleChangeLog;
 use Illuminate\Support\Facades\DB;
 
 final class UpdateUser
@@ -17,11 +18,17 @@ final class UpdateUser
     public function handle(User $user, array $attributes, UserRole $role, ?int $clientId, array $skillIds): User
     {
         return DB::transaction(function () use ($user, $attributes, $role, $clientId, $skillIds): User {
+            $previousRole = $user->role();
+
             $user->fill($attributes);
             $user->client_id = $role === UserRole::ClientUser ? $clientId : null;
             $user->save();
 
             $user->syncRoles([$role->value]);
+
+            if ($previousRole !== $role) {
+                RoleChangeLog::record($user, $previousRole, $role);
+            }
 
             // Skills only mean something for technicians; drop them on a role change.
             $user->skills()->syncWithPivotValues(

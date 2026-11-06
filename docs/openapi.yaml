@@ -1,0 +1,2726 @@
+openapi: 3.0.3
+info:
+  title: 'FacilityDesk API'
+  description: "REST API v1 for FacilityDesk: work orders, technicians' jobs, sites, assets and dashboards."
+  version: 1.0.0
+servers:
+  -
+    url: 'http://facilitydesk.test'
+tags:
+  -
+    name: Authentication
+    description: 'Tokens are per device. Send them as `Authorization: Bearer <token>`.'
+  -
+    name: 'Work orders'
+    description: ''
+  -
+    name: Technician
+    description: ''
+  -
+    name: Sites
+    description: ''
+  -
+    name: Assets
+    description: ''
+  -
+    name: Dashboard
+    description: ''
+components:
+  securitySchemes:
+    default:
+      type: http
+      scheme: bearer
+      description: 'Get a token from <code>POST /api/v1/auth/login</code>.'
+security:
+  -
+    default: []
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: 'Log in'
+      operationId: logIn
+      description: "Exchanges workspace, email and password for a bearer token. Limited to\n5 attempts a minute per IP. Wrong workspace, email or password all give\nthe same answer, so the endpoint cannot be used to discover accounts."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  token: 1|aBcD…
+                  token_type: Bearer
+                  expires_at: '2026-06-03T10:00:00+00:00'
+                  user:
+                    id: 7
+                    name: 'Tom Tech'
+                    email: tom@acme.test
+                    phone: null
+                    role: technician
+                    client_id: null
+                properties:
+                  token:
+                    type: string
+                    example: 1|aBcD…
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_at:
+                    type: string
+                    example: '2026-06-03T10:00:00+00:00'
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 7
+                      name:
+                        type: string
+                        example: 'Tom Tech'
+                      email:
+                        type: string
+                        example: tom@acme.test
+                      phone:
+                        type: string
+                        example: null
+                        nullable: true
+                      role:
+                        type: string
+                        example: technician
+                      client_id:
+                        type: string
+                        example: null
+                        nullable: true
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'These credentials do not match our records.'
+                  errors:
+                    email:
+                      - 'These credentials do not match our records.'
+                properties:
+                  message:
+                    type: string
+                    example: 'These credentials do not match our records.'
+                  errors:
+                    type: object
+                    properties:
+                      email:
+                        type: array
+                        example:
+                          - 'These credentials do not match our records.'
+                        items:
+                          type: string
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenant:
+                  type: string
+                  description: 'The workspace slug (the subdomain). Must not be greater than 60 characters.'
+                  example: acme
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: tech@acme.test
+                password:
+                  type: string
+                  description: ''
+                  example: password
+                device_name:
+                  type: string
+                  description: "Shown in the user's list of signed-in devices. Must not be greater than 100 characters."
+                  example: 'Pixel 8'
+              required:
+                - tenant
+                - email
+                - password
+                - device_name
+      security: []
+  /api/v1/auth/logout:
+    post:
+      summary: 'Log out'
+      operationId: logOut
+      description: 'Revokes the token used for this request (other devices stay signed in).'
+      parameters: []
+      responses:
+        204:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: true
+      tags:
+        - Authentication
+  /api/v1/me:
+    get:
+      summary: 'Current user'
+      operationId: currentUser
+      description: 'The signed-in user, their workspace and permissions.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 7
+                    name: 'Tom Tech'
+                    email: tom@acme.test
+                    phone: null
+                    role: technician
+                    client_id: null
+                    tenant:
+                      id: 1
+                      name: 'Acme Facilities'
+                      slug: acme
+                      timezone: Asia/Kolkata
+                    permissions:
+                      - work_orders.work
+                      - work_orders.internal_comments
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 7
+                      name:
+                        type: string
+                        example: 'Tom Tech'
+                      email:
+                        type: string
+                        example: tom@acme.test
+                      phone:
+                        type: string
+                        example: null
+                        nullable: true
+                      role:
+                        type: string
+                        example: technician
+                      client_id:
+                        type: string
+                        example: null
+                        nullable: true
+                      tenant:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Acme Facilities'
+                          slug:
+                            type: string
+                            example: acme
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      permissions:
+                        type: array
+                        example:
+                          - work_orders.work
+                          - work_orders.internal_comments
+                        items:
+                          type: string
+      tags:
+        - Authentication
+  /api/v1/work-orders:
+    get:
+      summary: 'List work orders'
+      operationId: listWorkOrders
+      description: "Only what the caller may see: everything for supervisors and admins,\nassigned jobs for technicians, their client's work orders for client users."
+      parameters:
+        -
+          in: query
+          name: status
+          description: 'One of open, assigned, in_progress, on_hold, resolved, closed, cancelled.'
+          example: open
+          required: false
+          schema:
+            type: string
+            description: 'One of open, assigned, in_progress, on_hold, resolved, closed, cancelled.'
+            example: open
+            enum:
+              - open
+              - assigned
+              - in_progress
+              - on_hold
+              - resolved
+              - closed
+              - cancelled
+            nullable: true
+        -
+          in: query
+          name: priority
+          description: 'One of critical, high, medium, low.'
+          example: high
+          required: false
+          schema:
+            type: string
+            description: 'One of critical, high, medium, low.'
+            example: high
+            enum:
+              - critical
+              - high
+              - medium
+              - low
+            nullable: true
+        -
+          in: query
+          name: site_id
+          description: ''
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: ''
+            example: 1
+            nullable: true
+        -
+          in: query
+          name: assigned_to
+          description: 'Technician user id.'
+          example: 7
+          required: false
+          schema:
+            type: integer
+            description: 'Technician user id.'
+            example: 7
+            nullable: true
+        -
+          in: query
+          name: from
+          description: 'Raised on or after this date (tenant timezone). Must be a valid date in the format <code>Y-m-d</code>.'
+          example: '2026-05-01'
+          required: false
+          schema:
+            type: string
+            description: 'Raised on or after this date (tenant timezone). Must be a valid date in the format <code>Y-m-d</code>.'
+            example: '2026-05-01'
+            nullable: true
+        -
+          in: query
+          name: to
+          description: 'Raised on or before this date (tenant timezone). Must be a valid date in the format <code>Y-m-d</code>. Must be a date after or equal to <code>from</code>.'
+          example: '2026-05-31'
+          required: false
+          schema:
+            type: string
+            description: 'Raised on or before this date (tenant timezone). Must be a valid date in the format <code>Y-m-d</code>. Must be a date after or equal to <code>from</code>.'
+            example: '2026-05-31'
+            nullable: true
+        -
+          in: query
+          name: per_page
+          description: '1-100, default 20. Must be at least 1. Must not be greater than 100.'
+          example: 20
+          required: false
+          schema:
+            type: integer
+            description: '1-100, default 20. Must be at least 1. Must not be greater than 100.'
+            example: 20
+            nullable: true
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 1
+                      number: WO-2026-81079
+                      title: 'Dolorum amet iste laborum eius est.'
+                      description: 'Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.'
+                      priority: medium
+                      status: open
+                      source: web
+                      site:
+                        id: 1
+                        code: jur-70
+                        name: 'Michale Lodge Campus'
+                        city: Gibsonview
+                        timezone: Asia/Kolkata
+                      location:
+                        id: 1
+                        site_id: 2
+                        parent_id: null
+                        type: building
+                        name: 'Block z7'
+                        path: 'Block z7'
+                      category:
+                        id: 1
+                        name: 'aut works'
+                      asset:
+                        id: 1
+                        code: AST-4130
+                        name: 'DG set 8'
+                      raised_by:
+                        id: 1
+                        name: 'Shane Howe'
+                      assignee:
+                        id: 2
+                        name: 'Hilma Nienow'
+                      sla:
+                        response_due_at: '2026-11-06T12:36:35+00:00'
+                        resolution_due_at: '2026-11-07T08:36:35+00:00'
+                        responded_at: null
+                        resolved_at: null
+                        closed_at: null
+                        hold_minutes: 0
+                        is_response_breached: false
+                        is_resolution_breached: false
+                      resolution_note: null
+                      created_at: '2026-11-06T08:36:35+00:00'
+                      updated_at: '2026-11-06T08:36:35+00:00'
+                    -
+                      id: 2
+                      number: WO-2026-73072
+                      title: 'Voluptatum ab nisi dolor rerum.'
+                      description: 'Non fugiat possimus id cupiditate. Mollitia quis et reprehenderit et saepe rem et. Rerum reiciendis sit aperiam quia inventore consequatur ea. Unde est dolor porro.'
+                      priority: medium
+                      status: open
+                      source: web
+                      site:
+                        id: 4
+                        code: jka-08
+                        name: 'Brando Way Campus'
+                        city: 'East Medaberg'
+                        timezone: Asia/Kolkata
+                      location:
+                        id: 3
+                        site_id: 5
+                        parent_id: null
+                        type: building
+                        name: 'Block o9'
+                        path: 'Block o9'
+                      category:
+                        id: 3
+                        name: 'qui works'
+                      asset:
+                        id: 2
+                        code: AST-5077
+                        name: 'Water pump 3'
+                      raised_by:
+                        id: 3
+                        name: 'Monserrat Schmitt'
+                      assignee:
+                        id: 4
+                        name: 'Hosea Barton'
+                      sla:
+                        response_due_at: '2026-11-06T12:36:35+00:00'
+                        resolution_due_at: '2026-11-07T08:36:35+00:00'
+                        responded_at: null
+                        resolved_at: null
+                        closed_at: null
+                        hold_minutes: 0
+                        is_response_breached: false
+                        is_resolution_breached: false
+                      resolution_note: null
+                      created_at: '2026-11-06T08:36:35+00:00'
+                      updated_at: '2026-11-06T08:36:35+00:00'
+                  links:
+                    first: '/?page=1'
+                    last: '/?page=1'
+                    prev: null
+                    next: null
+                  meta:
+                    current_page: 1
+                    from: 1
+                    last_page: 1
+                    links:
+                      -
+                        url: null
+                        label: '&laquo; Previous'
+                        page: null
+                        active: false
+                      -
+                        url: '/?page=1'
+                        label: '1'
+                        page: 1
+                        active: true
+                      -
+                        url: null
+                        label: 'Next &raquo;'
+                        page: null
+                        active: false
+                    path: /
+                    per_page: 20
+                    to: 2
+                    total: 2
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        number: WO-2026-81079
+                        title: 'Dolorum amet iste laborum eius est.'
+                        description: 'Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.'
+                        priority: medium
+                        status: open
+                        source: web
+                        site:
+                          id: 1
+                          code: jur-70
+                          name: 'Michale Lodge Campus'
+                          city: Gibsonview
+                          timezone: Asia/Kolkata
+                        location:
+                          id: 1
+                          site_id: 2
+                          parent_id: null
+                          type: building
+                          name: 'Block z7'
+                          path: 'Block z7'
+                        category:
+                          id: 1
+                          name: 'aut works'
+                        asset:
+                          id: 1
+                          code: AST-4130
+                          name: 'DG set 8'
+                        raised_by:
+                          id: 1
+                          name: 'Shane Howe'
+                        assignee:
+                          id: 2
+                          name: 'Hilma Nienow'
+                        sla:
+                          response_due_at: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at: '2026-11-07T08:36:35+00:00'
+                          responded_at: null
+                          resolved_at: null
+                          closed_at: null
+                          hold_minutes: 0
+                          is_response_breached: false
+                          is_resolution_breached: false
+                        resolution_note: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                        updated_at: '2026-11-06T08:36:35+00:00'
+                      -
+                        id: 2
+                        number: WO-2026-73072
+                        title: 'Voluptatum ab nisi dolor rerum.'
+                        description: 'Non fugiat possimus id cupiditate. Mollitia quis et reprehenderit et saepe rem et. Rerum reiciendis sit aperiam quia inventore consequatur ea. Unde est dolor porro.'
+                        priority: medium
+                        status: open
+                        source: web
+                        site:
+                          id: 4
+                          code: jka-08
+                          name: 'Brando Way Campus'
+                          city: 'East Medaberg'
+                          timezone: Asia/Kolkata
+                        location:
+                          id: 3
+                          site_id: 5
+                          parent_id: null
+                          type: building
+                          name: 'Block o9'
+                          path: 'Block o9'
+                        category:
+                          id: 3
+                          name: 'qui works'
+                        asset:
+                          id: 2
+                          code: AST-5077
+                          name: 'Water pump 3'
+                        raised_by:
+                          id: 3
+                          name: 'Monserrat Schmitt'
+                        assignee:
+                          id: 4
+                          name: 'Hosea Barton'
+                        sla:
+                          response_due_at: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at: '2026-11-07T08:36:35+00:00'
+                          responded_at: null
+                          resolved_at: null
+                          closed_at: null
+                          hold_minutes: 0
+                          is_response_breached: false
+                          is_resolution_breached: false
+                        resolution_note: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                        updated_at: '2026-11-06T08:36:35+00:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        number:
+                          type: string
+                          example: WO-2026-81079
+                        title:
+                          type: string
+                          example: 'Dolorum amet iste laborum eius est.'
+                        description:
+                          type: string
+                          example: 'Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.'
+                        priority:
+                          type: string
+                          example: medium
+                        status:
+                          type: string
+                          example: open
+                        source:
+                          type: string
+                          example: web
+                        site:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            code:
+                              type: string
+                              example: jur-70
+                            name:
+                              type: string
+                              example: 'Michale Lodge Campus'
+                            city:
+                              type: string
+                              example: Gibsonview
+                            timezone:
+                              type: string
+                              example: Asia/Kolkata
+                        location:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            site_id:
+                              type: integer
+                              example: 2
+                            parent_id:
+                              type: string
+                              example: null
+                              nullable: true
+                            type:
+                              type: string
+                              example: building
+                            name:
+                              type: string
+                              example: 'Block z7'
+                            path:
+                              type: string
+                              example: 'Block z7'
+                        category:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            name:
+                              type: string
+                              example: 'aut works'
+                        asset:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            code:
+                              type: string
+                              example: AST-4130
+                            name:
+                              type: string
+                              example: 'DG set 8'
+                        raised_by:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            name:
+                              type: string
+                              example: 'Shane Howe'
+                        assignee:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                            name:
+                              type: string
+                              example: 'Hilma Nienow'
+                        sla:
+                          type: object
+                          properties:
+                            response_due_at:
+                              type: string
+                              example: '2026-11-06T12:36:35+00:00'
+                            resolution_due_at:
+                              type: string
+                              example: '2026-11-07T08:36:35+00:00'
+                            responded_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            resolved_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            closed_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            hold_minutes:
+                              type: integer
+                              example: 0
+                            is_response_breached:
+                              type: boolean
+                              example: false
+                            is_resolution_breached:
+                              type: boolean
+                              example: false
+                        resolution_note:
+                          type: string
+                          example: null
+                          nullable: true
+                        created_at:
+                          type: string
+                          example: '2026-11-06T08:36:35+00:00'
+                        updated_at:
+                          type: string
+                          example: '2026-11-06T08:36:35+00:00'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        example: '/?page=1'
+                      last:
+                        type: string
+                        example: '/?page=1'
+                      prev:
+                        type: string
+                        example: null
+                        nullable: true
+                      next:
+                        type: string
+                        example: null
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      links:
+                        type: array
+                        example:
+                          -
+                            url: null
+                            label: '&laquo; Previous'
+                            page: null
+                            active: false
+                          -
+                            url: '/?page=1'
+                            label: '1'
+                            page: 1
+                            active: true
+                          -
+                            url: null
+                            label: 'Next &raquo;'
+                            page: null
+                            active: false
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              example: null
+                              nullable: true
+                            label:
+                              type: string
+                              example: '&laquo; Previous'
+                            page:
+                              type: string
+                              example: null
+                              nullable: true
+                            active:
+                              type: boolean
+                              example: false
+                      path:
+                        type: string
+                        example: /
+                      per_page:
+                        type: integer
+                        example: 20
+                      to:
+                        type: integer
+                        example: 2
+                      total:
+                        type: integer
+                        example: 2
+      tags:
+        - 'Work orders'
+    post:
+      summary: 'Raise a work order'
+      operationId: raiseAWorkOrder
+      description: 'Send as `multipart/form-data` to attach photos.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    number: WO-2026-49766
+                    title: 'Amet iste laborum eius est dolor.'
+                    description: 'Voluptatem quisquam quibusdam sed vel a quo sed. Facilis perferendis dolores molestias ipsam. Veniam sed fuga aspernatur natus earum.'
+                    priority: medium
+                    status: open
+                    source: web
+                    site:
+                      id: 1
+                      code: loa-86
+                      name: 'Isabel Light Campus'
+                      city: Schuppechester
+                      timezone: Asia/Kolkata
+                    location:
+                      id: 1
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block j2'
+                      path: 'Block j2'
+                    category:
+                      id: 1
+                      name: 'et works'
+                    asset:
+                      id: 1
+                      code: AST-9336
+                      name: 'DG set 15'
+                    raised_by:
+                      id: 1
+                      name: 'Myrtis Bruen'
+                    assignee:
+                      id: 2
+                      name: 'Maryjane Adams'
+                    sla:
+                      response_due_at: '2026-11-06T12:36:35+00:00'
+                      resolution_due_at: '2026-11-07T08:36:35+00:00'
+                      responded_at: null
+                      resolved_at: null
+                      closed_at: null
+                      hold_minutes: 0
+                      is_response_breached: false
+                      is_resolution_breached: false
+                    resolution_note: null
+                    created_at: '2026-11-06T08:36:35+00:00'
+                    updated_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      number:
+                        type: string
+                        example: WO-2026-49766
+                      title:
+                        type: string
+                        example: 'Amet iste laborum eius est dolor.'
+                      description:
+                        type: string
+                        example: 'Voluptatem quisquam quibusdam sed vel a quo sed. Facilis perferendis dolores molestias ipsam. Veniam sed fuga aspernatur natus earum.'
+                      priority:
+                        type: string
+                        example: medium
+                      status:
+                        type: string
+                        example: open
+                      source:
+                        type: string
+                        example: web
+                      site:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: loa-86
+                          name:
+                            type: string
+                            example: 'Isabel Light Campus'
+                          city:
+                            type: string
+                            example: Schuppechester
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      location:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          site_id:
+                            type: integer
+                            example: 2
+                          parent_id:
+                            type: string
+                            example: null
+                            nullable: true
+                          type:
+                            type: string
+                            example: building
+                          name:
+                            type: string
+                            example: 'Block j2'
+                          path:
+                            type: string
+                            example: 'Block j2'
+                      category:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'et works'
+                      asset:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: AST-9336
+                          name:
+                            type: string
+                            example: 'DG set 15'
+                      raised_by:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Myrtis Bruen'
+                      assignee:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Maryjane Adams'
+                      sla:
+                        type: object
+                        properties:
+                          response_due_at:
+                            type: string
+                            example: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at:
+                            type: string
+                            example: '2026-11-07T08:36:35+00:00'
+                          responded_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          resolved_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          closed_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          hold_minutes:
+                            type: integer
+                            example: 0
+                          is_response_breached:
+                            type: boolean
+                            example: false
+                          is_resolution_breached:
+                            type: boolean
+                            example: false
+                      resolution_note:
+                        type: string
+                        example: null
+                        nullable: true
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  description: 'Must be a file. Must not be greater than 5120 kilobytes.'
+                  items:
+                    type: string
+                    format: binary
+  '/api/v1/work-orders/{workOrder_id}':
+    get:
+      summary: 'Show a work order'
+      operationId: showAWorkOrder
+      description: "Includes the status history, comments (internal ones only for staff),\nattachments and the actions available to the caller."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    number: WO-2026-49546
+                    title: 'Ipsam sit veniam sed fuga aspernatur.'
+                    description: 'Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum. Et necessitatibus architecto aut consequatur debitis et id. Qui id totam temporibus quia ipsam. Iusto iusto accusamus iusto similique accusantium et.'
+                    priority: medium
+                    status: open
+                    source: web
+                    site:
+                      id: 1
+                      code: loi-26
+                      name: 'Huels Ville Campus'
+                      city: Augusttown
+                      timezone: Asia/Kolkata
+                    location:
+                      id: 1
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block r4'
+                      path: 'Block r4'
+                    category:
+                      id: 1
+                      name: 'soluta works'
+                    asset:
+                      id: 1
+                      code: AST-9880
+                      name: 'Lift 4'
+                    raised_by:
+                      id: 1
+                      name: 'Lila Nader MD'
+                    assignee:
+                      id: 2
+                      name: 'Miss Ciara Ernser'
+                    sla:
+                      response_due_at: '2026-11-06T12:36:35+00:00'
+                      resolution_due_at: '2026-11-07T08:36:35+00:00'
+                      responded_at: null
+                      resolved_at: null
+                      closed_at: null
+                      hold_minutes: 0
+                      is_response_breached: false
+                      is_resolution_breached: false
+                    resolution_note: null
+                    available_transitions:
+                      statuses: []
+                      can_assign: false
+                      can_comment: false
+                      can_upload: false
+                    status_history:
+                      -
+                        from: open
+                        to: assigned
+                        note: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                    comments:
+                      -
+                        id: 1
+                        body: 'Accusamus mollitia quis et reprehenderit et saepe.'
+                        is_internal: false
+                        created_at: '2026-11-06T08:36:35+00:00'
+                    attachments:
+                      -
+                        id: 1
+                        kind: general
+                        original_name: photo.jpg
+                        mime_type: image/jpeg
+                        size_bytes: 1024
+                        processed: false
+                        url: 'http://facilitydesk.test/api/v1/attachments/1'
+                        thumbnail_url: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                    created_at: '2026-11-06T08:36:35+00:00'
+                    updated_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      number:
+                        type: string
+                        example: WO-2026-49546
+                      title:
+                        type: string
+                        example: 'Ipsam sit veniam sed fuga aspernatur.'
+                      description:
+                        type: string
+                        example: 'Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum. Et necessitatibus architecto aut consequatur debitis et id. Qui id totam temporibus quia ipsam. Iusto iusto accusamus iusto similique accusantium et.'
+                      priority:
+                        type: string
+                        example: medium
+                      status:
+                        type: string
+                        example: open
+                      source:
+                        type: string
+                        example: web
+                      site:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: loi-26
+                          name:
+                            type: string
+                            example: 'Huels Ville Campus'
+                          city:
+                            type: string
+                            example: Augusttown
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      location:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          site_id:
+                            type: integer
+                            example: 2
+                          parent_id:
+                            type: string
+                            example: null
+                            nullable: true
+                          type:
+                            type: string
+                            example: building
+                          name:
+                            type: string
+                            example: 'Block r4'
+                          path:
+                            type: string
+                            example: 'Block r4'
+                      category:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'soluta works'
+                      asset:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: AST-9880
+                          name:
+                            type: string
+                            example: 'Lift 4'
+                      raised_by:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Lila Nader MD'
+                      assignee:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Miss Ciara Ernser'
+                      sla:
+                        type: object
+                        properties:
+                          response_due_at:
+                            type: string
+                            example: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at:
+                            type: string
+                            example: '2026-11-07T08:36:35+00:00'
+                          responded_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          resolved_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          closed_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          hold_minutes:
+                            type: integer
+                            example: 0
+                          is_response_breached:
+                            type: boolean
+                            example: false
+                          is_resolution_breached:
+                            type: boolean
+                            example: false
+                      resolution_note:
+                        type: string
+                        example: null
+                        nullable: true
+                      available_transitions:
+                        type: object
+                        properties:
+                          statuses:
+                            type: array
+                            example: []
+                          can_assign:
+                            type: boolean
+                            example: false
+                          can_comment:
+                            type: boolean
+                            example: false
+                          can_upload:
+                            type: boolean
+                            example: false
+                      status_history:
+                        type: array
+                        example:
+                          -
+                            from: open
+                            to: assigned
+                            note: null
+                            created_at: '2026-11-06T08:36:35+00:00'
+                        items:
+                          type: object
+                          properties:
+                            from:
+                              type: string
+                              example: open
+                            to:
+                              type: string
+                              example: assigned
+                            note:
+                              type: string
+                              example: null
+                              nullable: true
+                            created_at:
+                              type: string
+                              example: '2026-11-06T08:36:35+00:00'
+                      comments:
+                        type: array
+                        example:
+                          -
+                            id: 1
+                            body: 'Accusamus mollitia quis et reprehenderit et saepe.'
+                            is_internal: false
+                            created_at: '2026-11-06T08:36:35+00:00'
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            body:
+                              type: string
+                              example: 'Accusamus mollitia quis et reprehenderit et saepe.'
+                            is_internal:
+                              type: boolean
+                              example: false
+                            created_at:
+                              type: string
+                              example: '2026-11-06T08:36:35+00:00'
+                      attachments:
+                        type: array
+                        example:
+                          -
+                            id: 1
+                            kind: general
+                            original_name: photo.jpg
+                            mime_type: image/jpeg
+                            size_bytes: 1024
+                            processed: false
+                            url: 'http://facilitydesk.test/api/v1/attachments/1'
+                            thumbnail_url: null
+                            created_at: '2026-11-06T08:36:35+00:00'
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            kind:
+                              type: string
+                              example: general
+                            original_name:
+                              type: string
+                              example: photo.jpg
+                            mime_type:
+                              type: string
+                              example: image/jpeg
+                            size_bytes:
+                              type: integer
+                              example: 1024
+                            processed:
+                              type: boolean
+                              example: false
+                            url:
+                              type: string
+                              example: 'http://facilitydesk.test/api/v1/attachments/1'
+                            thumbnail_url:
+                              type: string
+                              example: null
+                              nullable: true
+                            created_at:
+                              type: string
+                              example: '2026-11-06T08:36:35+00:00'
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/work-orders/{workOrder_id}/assign':
+    patch:
+      summary: 'Assign or reassign'
+      operationId: assignOrReassign
+      description: 'Supervisors and admins. The work order must be open or assigned.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    number: WO-2026-62210
+                    title: 'Iste laborum eius est.'
+                    description: 'Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.'
+                    priority: medium
+                    status: open
+                    source: web
+                    site:
+                      id: 1
+                      code: yvo-67
+                      name: 'Freida Springs Campus'
+                      city: 'Port Hoyt'
+                      timezone: Asia/Kolkata
+                    location:
+                      id: 1
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block w3'
+                      path: 'Block w3'
+                    category:
+                      id: 1
+                      name: 'impedit works'
+                    asset:
+                      id: 1
+                      code: AST-1408
+                      name: 'Lift 5'
+                    raised_by:
+                      id: 1
+                      name: 'Gilda Roberts II'
+                    assignee:
+                      id: 2
+                      name: 'Randal Kozey'
+                    sla:
+                      response_due_at: '2026-11-06T12:36:35+00:00'
+                      resolution_due_at: '2026-11-07T08:36:35+00:00'
+                      responded_at: null
+                      resolved_at: null
+                      closed_at: null
+                      hold_minutes: 0
+                      is_response_breached: false
+                      is_resolution_breached: false
+                    resolution_note: null
+                    created_at: '2026-11-06T08:36:35+00:00'
+                    updated_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      number:
+                        type: string
+                        example: WO-2026-62210
+                      title:
+                        type: string
+                        example: 'Iste laborum eius est.'
+                      description:
+                        type: string
+                        example: 'Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.'
+                      priority:
+                        type: string
+                        example: medium
+                      status:
+                        type: string
+                        example: open
+                      source:
+                        type: string
+                        example: web
+                      site:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: yvo-67
+                          name:
+                            type: string
+                            example: 'Freida Springs Campus'
+                          city:
+                            type: string
+                            example: 'Port Hoyt'
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      location:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          site_id:
+                            type: integer
+                            example: 2
+                          parent_id:
+                            type: string
+                            example: null
+                            nullable: true
+                          type:
+                            type: string
+                            example: building
+                          name:
+                            type: string
+                            example: 'Block w3'
+                          path:
+                            type: string
+                            example: 'Block w3'
+                      category:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'impedit works'
+                      asset:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: AST-1408
+                          name:
+                            type: string
+                            example: 'Lift 5'
+                      raised_by:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Gilda Roberts II'
+                      assignee:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Randal Kozey'
+                      sla:
+                        type: object
+                        properties:
+                          response_due_at:
+                            type: string
+                            example: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at:
+                            type: string
+                            example: '2026-11-07T08:36:35+00:00'
+                          responded_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          resolved_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          closed_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          hold_minutes:
+                            type: integer
+                            example: 0
+                          is_response_breached:
+                            type: boolean
+                            example: false
+                          is_resolution_breached:
+                            type: boolean
+                            example: false
+                      resolution_note:
+                        type: string
+                        example: null
+                        nullable: true
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignee_id:
+                  type: integer
+                  description: 'An active technician of the workspace. Must match an existing stored value.'
+                  example: 7
+                note:
+                  type: string
+                  description: 'Must not be greater than 500 characters.'
+                  example: 'Closest to site today.'
+                  nullable: true
+              required:
+                - assignee_id
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/work-orders/{workOrder_id}/status':
+    patch:
+      summary: 'Change status'
+      operationId: changeStatus
+      description: "Technicians (on their jobs): in_progress, on_hold, resolved. Client users:\nclosed or assigned (reopen) once resolved. Supervisors and admins: any\nlegal move. Illegal moves are 422, moves the caller may not make are 403."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    number: WO-2026-18667
+                    title: 'Laborum eius est dolor dolores minus.'
+                    description: 'Quibusdam sed vel a quo sed fugit facilis. Dolores molestias ipsam sit. Sed fuga aspernatur natus earum.'
+                    priority: medium
+                    status: open
+                    source: web
+                    site:
+                      id: 1
+                      code: uyd-02
+                      name: 'Kemmer Parks Campus'
+                      city: 'Port Bentonbury'
+                      timezone: Asia/Kolkata
+                    location:
+                      id: 1
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block u3'
+                      path: 'Block u3'
+                    category:
+                      id: 1
+                      name: 'dolor works'
+                    asset:
+                      id: 1
+                      code: AST-5721
+                      name: 'Lift 19'
+                    raised_by:
+                      id: 1
+                      name: 'Dr. Jane Hickle'
+                    assignee:
+                      id: 2
+                      name: 'Angel Klocko'
+                    sla:
+                      response_due_at: '2026-11-06T12:36:35+00:00'
+                      resolution_due_at: '2026-11-07T08:36:35+00:00'
+                      responded_at: null
+                      resolved_at: null
+                      closed_at: null
+                      hold_minutes: 0
+                      is_response_breached: false
+                      is_resolution_breached: false
+                    resolution_note: null
+                    created_at: '2026-11-06T08:36:35+00:00'
+                    updated_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      number:
+                        type: string
+                        example: WO-2026-18667
+                      title:
+                        type: string
+                        example: 'Laborum eius est dolor dolores minus.'
+                      description:
+                        type: string
+                        example: 'Quibusdam sed vel a quo sed fugit facilis. Dolores molestias ipsam sit. Sed fuga aspernatur natus earum.'
+                      priority:
+                        type: string
+                        example: medium
+                      status:
+                        type: string
+                        example: open
+                      source:
+                        type: string
+                        example: web
+                      site:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: uyd-02
+                          name:
+                            type: string
+                            example: 'Kemmer Parks Campus'
+                          city:
+                            type: string
+                            example: 'Port Bentonbury'
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      location:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          site_id:
+                            type: integer
+                            example: 2
+                          parent_id:
+                            type: string
+                            example: null
+                            nullable: true
+                          type:
+                            type: string
+                            example: building
+                          name:
+                            type: string
+                            example: 'Block u3'
+                          path:
+                            type: string
+                            example: 'Block u3'
+                      category:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'dolor works'
+                      asset:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: AST-5721
+                          name:
+                            type: string
+                            example: 'Lift 19'
+                      raised_by:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Dr. Jane Hickle'
+                      assignee:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Angel Klocko'
+                      sla:
+                        type: object
+                        properties:
+                          response_due_at:
+                            type: string
+                            example: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at:
+                            type: string
+                            example: '2026-11-07T08:36:35+00:00'
+                          responded_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          resolved_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          closed_at:
+                            type: string
+                            example: null
+                            nullable: true
+                          hold_minutes:
+                            type: integer
+                            example: 0
+                          is_response_breached:
+                            type: boolean
+                            example: false
+                          is_resolution_breached:
+                            type: boolean
+                            example: false
+                      resolution_note:
+                        type: string
+                        example: null
+                        nullable: true
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Target status. "assigned" here means reopen (from resolved); use /assign to assign.'
+                  example: in_progress
+                  enum:
+                    - open
+                    - assigned
+                    - in_progress
+                    - on_hold
+                    - resolved
+                    - closed
+                    - cancelled
+                note:
+                  type: string
+                  description: 'Required to resolve, reopen or cancel. Must not be greater than 500 characters.'
+                  example: 'Replaced the capacitor.'
+                  nullable: true
+              required:
+                - status
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/work-orders/{workOrder_id}/comments':
+    post:
+      summary: 'Add a comment'
+      operationId: addAComment
+      description: 'Anyone involved in the work order. Only staff may post internal comments.'
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    body: 'Dolores dolorum amet iste laborum eius est dolor.'
+                    is_internal: false
+                    author:
+                      id: 2
+                      name: 'Mrs. Loren Lowe'
+                    created_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      body:
+                        type: string
+                        example: 'Dolores dolorum amet iste laborum eius est dolor.'
+                      is_internal:
+                        type: boolean
+                        example: false
+                      author:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Mrs. Loren Lowe'
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: 'Must not be greater than 5000 characters.'
+                  example: 'Parts ordered, back tomorrow.'
+                is_internal:
+                  type: boolean
+                  description: 'Hidden from client users. Staff only.'
+                  example: false
+              required:
+                - body
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/work-orders/{workOrder_id}/media':
+    post:
+      summary: 'Upload a photo'
+      operationId: uploadAPhoto
+      description: "The assigned technician, or a supervisor/admin, while the work order is\nstill open. Photos are resized and stripped of EXIF in the background,\nso `processed` is false at first."
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    kind: general
+                    original_name: photo.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 1024
+                    processed: false
+                    url: 'http://facilitydesk.test/api/v1/attachments/1'
+                    thumbnail_url: null
+                    created_at: '2026-11-06T08:36:35+00:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      kind:
+                        type: string
+                        example: general
+                      original_name:
+                        type: string
+                        example: photo.jpg
+                      mime_type:
+                        type: string
+                        example: image/jpeg
+                      size_bytes:
+                        type: integer
+                        example: 1024
+                      processed:
+                        type: boolean
+                        example: false
+                      url:
+                        type: string
+                        example: 'http://facilitydesk.test/api/v1/attachments/1'
+                      thumbnail_url:
+                        type: string
+                        example: null
+                        nullable: true
+                      created_at:
+                        type: string
+                        example: '2026-11-06T08:36:35+00:00'
+      tags:
+        - 'Work orders'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'JPG, PNG, WebP or PDF, up to 5 MB. Must be a file. Must not be greater than 5120 kilobytes.'
+                kind:
+                  type: string
+                  description: 'before, after or general.'
+                  example: after
+                  enum:
+                    - before
+                    - after
+                    - general
+              required:
+                - file
+                - kind
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/attachments/{id}':
+    get:
+      summary: 'Download an attachment'
+      operationId: downloadAnAttachment
+      description: "Streams the file (or redirects to a 5-minute presigned URL on S3) if the\ncaller can see the work order."
+      parameters:
+        -
+          in: query
+          name: thumb
+          description: 'Return the 320px thumbnail instead.'
+          example: false
+          required: false
+          schema:
+            type: boolean
+            description: 'Return the 320px thumbnail instead.'
+            example: false
+      responses: {  }
+      tags:
+        - 'Work orders'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the attachment.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  /api/v1/technician/jobs:
+    get:
+      summary: 'My jobs'
+      operationId: myJobs
+      description: "The caller's unfinished jobs, soonest resolution deadline first.\nCursor-paginated: follow `links.next` / `meta.next_cursor`, which stays\nstable while jobs are added or finished in the meantime."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 1
+                      number: WO-2026-49491
+                      title: 'In sit tempore voluptatem qui odio reprehenderit.'
+                      description: 'Sit aut voluptatem dolorum at repellat et dolorum deleniti. Enim numquam sit explicabo maxime reiciendis molestiae. Non quo recusandae quaerat qui ullam illo. Rerum dolorem sunt ut consectetur et.'
+                      priority: medium
+                      status: open
+                      source: web
+                      site:
+                        id: 1
+                        code: ixd-65
+                        name: 'Eve Falls Campus'
+                        city: Macchester
+                        timezone: Asia/Kolkata
+                      location:
+                        id: 1
+                        site_id: 2
+                        parent_id: null
+                        type: building
+                        name: 'Block v8'
+                        path: 'Block v8'
+                      category:
+                        id: 1
+                        name: 'quis works'
+                      asset:
+                        id: 1
+                        code: AST-2784
+                        name: 'Fire panel 14'
+                      sla:
+                        response_due_at: '2026-11-06T12:36:35+00:00'
+                        resolution_due_at: '2026-11-07T08:36:35+00:00'
+                        responded_at: null
+                        resolved_at: null
+                        closed_at: null
+                        hold_minutes: 0
+                        is_response_breached: false
+                        is_resolution_breached: false
+                      resolution_note: null
+                      created_at: '2026-11-06T08:36:35+00:00'
+                      updated_at: '2026-11-06T08:36:35+00:00'
+                    -
+                      id: 2
+                      number: WO-2026-60196
+                      title: 'Vitae ea necessitatibus illum culpa.'
+                      description: 'Eligendi nisi adipisci ratione magni. Accusamus rerum voluptatem inventore.'
+                      priority: medium
+                      status: open
+                      source: web
+                      site:
+                        id: 4
+                        code: ozr-92
+                        name: 'Bogan Flat Campus'
+                        city: 'West Josefa'
+                        timezone: Asia/Kolkata
+                      location:
+                        id: 3
+                        site_id: 5
+                        parent_id: null
+                        type: building
+                        name: 'Block o0'
+                        path: 'Block o0'
+                      category:
+                        id: 3
+                        name: 'aliquid works'
+                      asset:
+                        id: 2
+                        code: AST-0801
+                        name: 'Fire panel 15'
+                      sla:
+                        response_due_at: '2026-11-06T12:36:35+00:00'
+                        resolution_due_at: '2026-11-07T08:36:35+00:00'
+                        responded_at: null
+                        resolved_at: null
+                        closed_at: null
+                        hold_minutes: 0
+                        is_response_breached: false
+                        is_resolution_breached: false
+                      resolution_note: null
+                      created_at: '2026-11-06T08:36:35+00:00'
+                      updated_at: '2026-11-06T08:36:35+00:00'
+                  links:
+                    first: null
+                    last: null
+                    prev: null
+                    next: null
+                  meta:
+                    path: /
+                    per_page: 20
+                    next_cursor: null
+                    prev_cursor: null
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        number: WO-2026-49491
+                        title: 'In sit tempore voluptatem qui odio reprehenderit.'
+                        description: 'Sit aut voluptatem dolorum at repellat et dolorum deleniti. Enim numquam sit explicabo maxime reiciendis molestiae. Non quo recusandae quaerat qui ullam illo. Rerum dolorem sunt ut consectetur et.'
+                        priority: medium
+                        status: open
+                        source: web
+                        site:
+                          id: 1
+                          code: ixd-65
+                          name: 'Eve Falls Campus'
+                          city: Macchester
+                          timezone: Asia/Kolkata
+                        location:
+                          id: 1
+                          site_id: 2
+                          parent_id: null
+                          type: building
+                          name: 'Block v8'
+                          path: 'Block v8'
+                        category:
+                          id: 1
+                          name: 'quis works'
+                        asset:
+                          id: 1
+                          code: AST-2784
+                          name: 'Fire panel 14'
+                        sla:
+                          response_due_at: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at: '2026-11-07T08:36:35+00:00'
+                          responded_at: null
+                          resolved_at: null
+                          closed_at: null
+                          hold_minutes: 0
+                          is_response_breached: false
+                          is_resolution_breached: false
+                        resolution_note: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                        updated_at: '2026-11-06T08:36:35+00:00'
+                      -
+                        id: 2
+                        number: WO-2026-60196
+                        title: 'Vitae ea necessitatibus illum culpa.'
+                        description: 'Eligendi nisi adipisci ratione magni. Accusamus rerum voluptatem inventore.'
+                        priority: medium
+                        status: open
+                        source: web
+                        site:
+                          id: 4
+                          code: ozr-92
+                          name: 'Bogan Flat Campus'
+                          city: 'West Josefa'
+                          timezone: Asia/Kolkata
+                        location:
+                          id: 3
+                          site_id: 5
+                          parent_id: null
+                          type: building
+                          name: 'Block o0'
+                          path: 'Block o0'
+                        category:
+                          id: 3
+                          name: 'aliquid works'
+                        asset:
+                          id: 2
+                          code: AST-0801
+                          name: 'Fire panel 15'
+                        sla:
+                          response_due_at: '2026-11-06T12:36:35+00:00'
+                          resolution_due_at: '2026-11-07T08:36:35+00:00'
+                          responded_at: null
+                          resolved_at: null
+                          closed_at: null
+                          hold_minutes: 0
+                          is_response_breached: false
+                          is_resolution_breached: false
+                        resolution_note: null
+                        created_at: '2026-11-06T08:36:35+00:00'
+                        updated_at: '2026-11-06T08:36:35+00:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        number:
+                          type: string
+                          example: WO-2026-49491
+                        title:
+                          type: string
+                          example: 'In sit tempore voluptatem qui odio reprehenderit.'
+                        description:
+                          type: string
+                          example: 'Sit aut voluptatem dolorum at repellat et dolorum deleniti. Enim numquam sit explicabo maxime reiciendis molestiae. Non quo recusandae quaerat qui ullam illo. Rerum dolorem sunt ut consectetur et.'
+                        priority:
+                          type: string
+                          example: medium
+                        status:
+                          type: string
+                          example: open
+                        source:
+                          type: string
+                          example: web
+                        site:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            code:
+                              type: string
+                              example: ixd-65
+                            name:
+                              type: string
+                              example: 'Eve Falls Campus'
+                            city:
+                              type: string
+                              example: Macchester
+                            timezone:
+                              type: string
+                              example: Asia/Kolkata
+                        location:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            site_id:
+                              type: integer
+                              example: 2
+                            parent_id:
+                              type: string
+                              example: null
+                              nullable: true
+                            type:
+                              type: string
+                              example: building
+                            name:
+                              type: string
+                              example: 'Block v8'
+                            path:
+                              type: string
+                              example: 'Block v8'
+                        category:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            name:
+                              type: string
+                              example: 'quis works'
+                        asset:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            code:
+                              type: string
+                              example: AST-2784
+                            name:
+                              type: string
+                              example: 'Fire panel 14'
+                        sla:
+                          type: object
+                          properties:
+                            response_due_at:
+                              type: string
+                              example: '2026-11-06T12:36:35+00:00'
+                            resolution_due_at:
+                              type: string
+                              example: '2026-11-07T08:36:35+00:00'
+                            responded_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            resolved_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            closed_at:
+                              type: string
+                              example: null
+                              nullable: true
+                            hold_minutes:
+                              type: integer
+                              example: 0
+                            is_response_breached:
+                              type: boolean
+                              example: false
+                            is_resolution_breached:
+                              type: boolean
+                              example: false
+                        resolution_note:
+                          type: string
+                          example: null
+                          nullable: true
+                        created_at:
+                          type: string
+                          example: '2026-11-06T08:36:35+00:00'
+                        updated_at:
+                          type: string
+                          example: '2026-11-06T08:36:35+00:00'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        example: null
+                        nullable: true
+                      last:
+                        type: string
+                        example: null
+                        nullable: true
+                      prev:
+                        type: string
+                        example: null
+                        nullable: true
+                      next:
+                        type: string
+                        example: null
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                        example: /
+                      per_page:
+                        type: integer
+                        example: 20
+                      next_cursor:
+                        type: string
+                        example: null
+                        nullable: true
+                      prev_cursor:
+                        type: string
+                        example: null
+                        nullable: true
+      tags:
+        - Technician
+  /api/v1/sites:
+    get:
+      summary: 'List sites'
+      operationId: listSites
+      description: "Active sites the caller can raise or work on work orders for: all for\nstaff, their client's for client users, covered sites for technicians."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 1
+                      code: fqc-28
+                      name: 'Eloisa Highway Campus'
+                      city: Bergnaumstad
+                      timezone: Asia/Kolkata
+                      client:
+                        id: 1
+                        name: Bogisich-White
+                    -
+                      id: 2
+                      code: uzs-55
+                      name: 'Alvera Plains Campus'
+                      city: Willowview
+                      timezone: Asia/Kolkata
+                      client:
+                        id: 2
+                        name: 'Skiles, Mante and Swaniawski'
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        code: fqc-28
+                        name: 'Eloisa Highway Campus'
+                        city: Bergnaumstad
+                        timezone: Asia/Kolkata
+                        client:
+                          id: 1
+                          name: Bogisich-White
+                      -
+                        id: 2
+                        code: uzs-55
+                        name: 'Alvera Plains Campus'
+                        city: Willowview
+                        timezone: Asia/Kolkata
+                        client:
+                          id: 2
+                          name: 'Skiles, Mante and Swaniawski'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        code:
+                          type: string
+                          example: fqc-28
+                        name:
+                          type: string
+                          example: 'Eloisa Highway Campus'
+                        city:
+                          type: string
+                          example: Bergnaumstad
+                        timezone:
+                          type: string
+                          example: Asia/Kolkata
+                        client:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            name:
+                              type: string
+                              example: Bogisich-White
+      tags:
+        - Sites
+  '/api/v1/sites/{site_id}/locations':
+    get:
+      summary: "List a site's locations"
+      operationId: listASitesLocations
+      description: 'Flat list ordered by path; rebuild the tree from parent_id.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 1
+                      site_id: 1
+                      parent_id: null
+                      type: building
+                      name: 'Block i3'
+                      path: 'Block i3'
+                    -
+                      id: 2
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block l2'
+                      path: 'Block l2'
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        site_id: 1
+                        parent_id: null
+                        type: building
+                        name: 'Block i3'
+                        path: 'Block i3'
+                      -
+                        id: 2
+                        site_id: 2
+                        parent_id: null
+                        type: building
+                        name: 'Block l2'
+                        path: 'Block l2'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        site_id:
+                          type: integer
+                          example: 1
+                        parent_id:
+                          type: string
+                          example: null
+                          nullable: true
+                        type:
+                          type: string
+                          example: building
+                        name:
+                          type: string
+                          example: 'Block i3'
+                        path:
+                          type: string
+                          example: 'Block i3'
+      tags:
+        - Sites
+    parameters:
+      -
+        in: path
+        name: site_id
+        description: 'The ID of the site.'
+        example: 17
+        required: true
+        schema:
+          type: integer
+  '/api/v1/assets/qr/{asset_qr_token}':
+    get:
+      summary: 'Look up a scanned QR code'
+      operationId: lookUpAScannedQRCode
+      description: "The token is the last path segment of the URL in the asset's QR code.\nReturns the asset with the open work orders the caller may see; another\nworkspace's token is a 404."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    code: AST-3139
+                    name: 'Lift 11'
+                    status: working
+                    make: 'Grady and Sons'
+                    model: M-626
+                    serial_no: SN09825193
+                    installed_at: '2024-11-06'
+                    warranty_until: '2027-11-06'
+                    under_warranty: true
+                    site:
+                      id: 1
+                      code: azg-44
+                      name: 'Weimann Mills Campus'
+                      city: 'Lake Eriberto'
+                      timezone: Asia/Kolkata
+                    location:
+                      id: 1
+                      site_id: 2
+                      parent_id: null
+                      type: building
+                      name: 'Block m2'
+                      path: 'Block m2'
+                    category:
+                      id: 1
+                      name: 'dolorem works'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      code:
+                        type: string
+                        example: AST-3139
+                      name:
+                        type: string
+                        example: 'Lift 11'
+                      status:
+                        type: string
+                        example: working
+                      make:
+                        type: string
+                        example: 'Grady and Sons'
+                      model:
+                        type: string
+                        example: M-626
+                      serial_no:
+                        type: string
+                        example: SN09825193
+                      installed_at:
+                        type: string
+                        example: '2024-11-06'
+                      warranty_until:
+                        type: string
+                        example: '2027-11-06'
+                      under_warranty:
+                        type: boolean
+                        example: true
+                      site:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          code:
+                            type: string
+                            example: azg-44
+                          name:
+                            type: string
+                            example: 'Weimann Mills Campus'
+                          city:
+                            type: string
+                            example: 'Lake Eriberto'
+                          timezone:
+                            type: string
+                            example: Asia/Kolkata
+                      location:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          site_id:
+                            type: integer
+                            example: 2
+                          parent_id:
+                            type: string
+                            example: null
+                            nullable: true
+                          type:
+                            type: string
+                            example: building
+                          name:
+                            type: string
+                            example: 'Block m2'
+                          path:
+                            type: string
+                            example: 'Block m2'
+                      category:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'dolorem works'
+      tags:
+        - Assets
+    parameters:
+      -
+        in: path
+        name: asset_qr_token
+        description: ''
+        example: consequatur
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: asset
+        description: 'The qr_token: last path segment of the URL in the QR code.'
+        example: 01JAXKZ5Q8V2M9T3R7N4HC6WYD
+        required: true
+        schema:
+          type: string
+  /api/v1/dashboard/summary:
+    get:
+      summary: Summary
+      operationId: summary
+      description: 'Supervisors and admins. "This month" is the workspace''s local month.'
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    open: 42
+                    unassigned: 6
+                    in_progress: 18
+                    on_hold: 3
+                    breached_open: 4
+                    resolved_this_month: 120
+                    sla_compliance_percent: 93.3
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      open:
+                        type: integer
+                        example: 42
+                      unassigned:
+                        type: integer
+                        example: 6
+                      in_progress:
+                        type: integer
+                        example: 18
+                      on_hold:
+                        type: integer
+                        example: 3
+                      breached_open:
+                        type: integer
+                        example: 4
+                      resolved_this_month:
+                        type: integer
+                        example: 120
+                      sla_compliance_percent:
+                        type: number
+                        example: 93.3
+      tags:
+        - Dashboard

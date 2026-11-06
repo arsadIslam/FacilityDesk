@@ -1,0 +1,734 @@
+{
+    "variable": [
+        {
+            "id": "baseUrl",
+            "key": "baseUrl",
+            "type": "string",
+            "name": "string",
+            "value": "http:\/\/facilitydesk.test"
+        }
+    ],
+    "info": {
+        "name": "FacilityDesk API",
+        "_postman_id": "8eec7056-65ff-4d9f-8a6c-327fefd14d2b",
+        "description": "REST API v1 for FacilityDesk: work orders, technicians' jobs, sites, assets and dashboards.",
+        "schema": "https:\/\/schema.getpostman.com\/json\/collection\/v2.1.0\/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "description": "Tokens are per device. Send them as `Authorization: Bearer <token>`.",
+            "item": [
+                {
+                    "name": "Log in",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/auth\/login",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/auth\/login"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"tenant\":\"acme\",\"email\":\"tech@acme.test\",\"password\":\"password\",\"device_name\":\"Pixel 8\"}"
+                        },
+                        "description": "Exchanges workspace, email and password for a bearer token. Limited to\n5 attempts a minute per IP. Wrong workspace, email or password all give\nthe same answer, so the endpoint cannot be used to discover accounts.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"token\":\"1|aBcD\\u2026\",\"token_type\":\"Bearer\",\"expires_at\":\"2026-06-03T10:00:00+00:00\",\"user\":{\"id\":7,\"name\":\"Tom Tech\",\"email\":\"tom@acme.test\",\"phone\":null,\"role\":\"technician\",\"client_id\":null}}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\":\"These credentials do not match our records.\",\"errors\":{\"email\":[\"These credentials do not match our records.\"]}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Log out",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/auth\/logout",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/auth\/logout"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Revokes the token used for this request (other devices stay signed in)."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 204,
+                            "body": null,
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Current user",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/me",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/me"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "The signed-in user, their workspace and permissions."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"id\":7,\"name\":\"Tom Tech\",\"email\":\"tom@acme.test\",\"phone\":null,\"role\":\"technician\",\"client_id\":null,\"tenant\":{\"id\":1,\"name\":\"Acme Facilities\",\"slug\":\"acme\",\"timezone\":\"Asia\\\/Kolkata\"},\"permissions\":[\"work_orders.work\",\"work_orders.internal_comments\"]}}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Work orders",
+            "description": "",
+            "item": [
+                {
+                    "name": "List work orders",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders",
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "open",
+                                    "description": "One of open, assigned, in_progress, on_hold, resolved, closed, cancelled.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "priority",
+                                    "value": "high",
+                                    "description": "One of critical, high, medium, low.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "site_id",
+                                    "value": "1",
+                                    "description": "",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "assigned_to",
+                                    "value": "7",
+                                    "description": "Technician user id.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "from",
+                                    "value": "2026-05-01",
+                                    "description": "Raised on or after this date (tenant timezone). Must be a valid date in the format Y-m-d.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-05-31",
+                                    "description": "Raised on or before this date (tenant timezone). Must be a valid date in the format Y-m-d. Must be a date after or equal to from.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "20",
+                                    "description": "1-100, default 20. Must be at least 1. Must not be greater than 100.",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders?status=open&priority=high&site_id=1&assigned_to=7&from=2026-05-01&to=2026-05-31&per_page=20"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Only what the caller may see: everything for supervisors and admins,\nassigned jobs for technicians, their client's work orders for client users."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":[{\"id\":1,\"number\":\"WO-2026-81079\",\"title\":\"Dolorum amet iste laborum eius est.\",\"description\":\"Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"jur-70\",\"name\":\"Michale Lodge Campus\",\"city\":\"Gibsonview\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block z7\",\"path\":\"Block z7\"},\"category\":{\"id\":1,\"name\":\"aut works\"},\"asset\":{\"id\":1,\"code\":\"AST-4130\",\"name\":\"DG set 8\"},\"raised_by\":{\"id\":1,\"name\":\"Shane Howe\"},\"assignee\":{\"id\":2,\"name\":\"Hilma Nienow\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"},{\"id\":2,\"number\":\"WO-2026-73072\",\"title\":\"Voluptatum ab nisi dolor rerum.\",\"description\":\"Non fugiat possimus id cupiditate. Mollitia quis et reprehenderit et saepe rem et. Rerum reiciendis sit aperiam quia inventore consequatur ea. Unde est dolor porro.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":4,\"code\":\"jka-08\",\"name\":\"Brando Way Campus\",\"city\":\"East Medaberg\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":3,\"site_id\":5,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block o9\",\"path\":\"Block o9\"},\"category\":{\"id\":3,\"name\":\"qui works\"},\"asset\":{\"id\":2,\"code\":\"AST-5077\",\"name\":\"Water pump 3\"},\"raised_by\":{\"id\":3,\"name\":\"Monserrat Schmitt\"},\"assignee\":{\"id\":4,\"name\":\"Hosea Barton\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}],\"links\":{\"first\":\"\\\/?page=1\",\"last\":\"\\\/?page=1\",\"prev\":null,\"next\":null},\"meta\":{\"current_page\":1,\"from\":1,\"last_page\":1,\"links\":[{\"url\":null,\"label\":\"&laquo; Previous\",\"page\":null,\"active\":false},{\"url\":\"\\\/?page=1\",\"label\":\"1\",\"page\":1,\"active\":true},{\"url\":null,\"label\":\"Next &raquo;\",\"page\":null,\"active\":false}],\"path\":\"\\\/\",\"per_page\":20,\"to\":2,\"total\":2}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Raise a work order",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart\/form-data"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "photos[]",
+                                    "src": [],
+                                    "type": "file"
+                                }
+                            ]
+                        },
+                        "description": "Send as `multipart\/form-data` to attach photos."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\"data\":{\"id\":1,\"number\":\"WO-2026-49766\",\"title\":\"Amet iste laborum eius est dolor.\",\"description\":\"Voluptatem quisquam quibusdam sed vel a quo sed. Facilis perferendis dolores molestias ipsam. Veniam sed fuga aspernatur natus earum.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"loa-86\",\"name\":\"Isabel Light Campus\",\"city\":\"Schuppechester\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block j2\",\"path\":\"Block j2\"},\"category\":{\"id\":1,\"name\":\"et works\"},\"asset\":{\"id\":1,\"code\":\"AST-9336\",\"name\":\"DG set 15\"},\"raised_by\":{\"id\":1,\"name\":\"Myrtis Bruen\"},\"assignee\":{\"id\":2,\"name\":\"Maryjane Adams\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Show a work order",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders\/:workOrder_id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders\/:workOrder_id",
+                            "variable": [
+                                {
+                                    "id": "workOrder_id",
+                                    "key": "workOrder_id",
+                                    "value": 17,
+                                    "description": "The ID of the workOrder."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Includes the status history, comments (internal ones only for staff),\nattachments and the actions available to the caller."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"id\":1,\"number\":\"WO-2026-49546\",\"title\":\"Ipsam sit veniam sed fuga aspernatur.\",\"description\":\"Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum. Et necessitatibus architecto aut consequatur debitis et id. Qui id totam temporibus quia ipsam. Iusto iusto accusamus iusto similique accusantium et.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"loi-26\",\"name\":\"Huels Ville Campus\",\"city\":\"Augusttown\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block r4\",\"path\":\"Block r4\"},\"category\":{\"id\":1,\"name\":\"soluta works\"},\"asset\":{\"id\":1,\"code\":\"AST-9880\",\"name\":\"Lift 4\"},\"raised_by\":{\"id\":1,\"name\":\"Lila Nader MD\"},\"assignee\":{\"id\":2,\"name\":\"Miss Ciara Ernser\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"available_transitions\":{\"statuses\":[],\"can_assign\":false,\"can_comment\":false,\"can_upload\":false},\"status_history\":[{\"from\":\"open\",\"to\":\"assigned\",\"note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\"}],\"comments\":[{\"id\":1,\"body\":\"Accusamus mollitia quis et reprehenderit et saepe.\",\"is_internal\":false,\"created_at\":\"2026-11-06T08:36:35+00:00\"}],\"attachments\":[{\"id\":1,\"kind\":\"general\",\"original_name\":\"photo.jpg\",\"mime_type\":\"image\\\/jpeg\",\"size_bytes\":1024,\"processed\":false,\"url\":\"http:\\\/\\\/facilitydesk.test\\\/api\\\/v1\\\/attachments\\\/1\",\"thumbnail_url\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\"}],\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Assign or reassign",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders\/:workOrder_id\/assign",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders\/:workOrder_id\/assign",
+                            "variable": [
+                                {
+                                    "id": "workOrder_id",
+                                    "key": "workOrder_id",
+                                    "value": 17,
+                                    "description": "The ID of the workOrder."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"assignee_id\":7,\"note\":\"Closest to site today.\"}"
+                        },
+                        "description": "Supervisors and admins. The work order must be open or assigned."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"id\":1,\"number\":\"WO-2026-62210\",\"title\":\"Iste laborum eius est.\",\"description\":\"Minus voluptatem quisquam quibusdam sed. A quo sed fugit facilis perferendis dolores molestias. Sit veniam sed fuga aspernatur natus. Quas dignissimos perferendis voluptatibus incidunt nostrum quia possimus rerum.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"yvo-67\",\"name\":\"Freida Springs Campus\",\"city\":\"Port Hoyt\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block w3\",\"path\":\"Block w3\"},\"category\":{\"id\":1,\"name\":\"impedit works\"},\"asset\":{\"id\":1,\"code\":\"AST-1408\",\"name\":\"Lift 5\"},\"raised_by\":{\"id\":1,\"name\":\"Gilda Roberts II\"},\"assignee\":{\"id\":2,\"name\":\"Randal Kozey\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Change status",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders\/:workOrder_id\/status",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders\/:workOrder_id\/status",
+                            "variable": [
+                                {
+                                    "id": "workOrder_id",
+                                    "key": "workOrder_id",
+                                    "value": 17,
+                                    "description": "The ID of the workOrder."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"status\":\"in_progress\",\"note\":\"Replaced the capacitor.\"}"
+                        },
+                        "description": "Technicians (on their jobs): in_progress, on_hold, resolved. Client users:\nclosed or assigned (reopen) once resolved. Supervisors and admins: any\nlegal move. Illegal moves are 422, moves the caller may not make are 403."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"id\":1,\"number\":\"WO-2026-18667\",\"title\":\"Laborum eius est dolor dolores minus.\",\"description\":\"Quibusdam sed vel a quo sed fugit facilis. Dolores molestias ipsam sit. Sed fuga aspernatur natus earum.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"uyd-02\",\"name\":\"Kemmer Parks Campus\",\"city\":\"Port Bentonbury\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block u3\",\"path\":\"Block u3\"},\"category\":{\"id\":1,\"name\":\"dolor works\"},\"asset\":{\"id\":1,\"code\":\"AST-5721\",\"name\":\"Lift 19\"},\"raised_by\":{\"id\":1,\"name\":\"Dr. Jane Hickle\"},\"assignee\":{\"id\":2,\"name\":\"Angel Klocko\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Add a comment",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders\/:workOrder_id\/comments",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders\/:workOrder_id\/comments",
+                            "variable": [
+                                {
+                                    "id": "workOrder_id",
+                                    "key": "workOrder_id",
+                                    "value": 17,
+                                    "description": "The ID of the workOrder."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"body\":\"Parts ordered, back tomorrow.\",\"is_internal\":false}"
+                        },
+                        "description": "Anyone involved in the work order. Only staff may post internal comments."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\"data\":{\"id\":1,\"body\":\"Dolores dolorum amet iste laborum eius est dolor.\",\"is_internal\":false,\"author\":{\"id\":2,\"name\":\"Mrs. Loren Lowe\"},\"created_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Upload a photo",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/work-orders\/:workOrder_id\/media",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/work-orders\/:workOrder_id\/media",
+                            "variable": [
+                                {
+                                    "id": "workOrder_id",
+                                    "key": "workOrder_id",
+                                    "value": 17,
+                                    "description": "The ID of the workOrder."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart\/form-data"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "kind",
+                                    "value": "after",
+                                    "type": "text",
+                                    "description": "before, after or general."
+                                },
+                                {
+                                    "key": "file",
+                                    "src": [],
+                                    "type": "file"
+                                }
+                            ]
+                        },
+                        "description": "The assigned technician, or a supervisor\/admin, while the work order is\nstill open. Photos are resized and stripped of EXIF in the background,\nso `processed` is false at first."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\"data\":{\"id\":1,\"kind\":\"general\",\"original_name\":\"photo.jpg\",\"mime_type\":\"image\\\/jpeg\",\"size_bytes\":1024,\"processed\":false,\"url\":\"http:\\\/\\\/facilitydesk.test\\\/api\\\/v1\\\/attachments\\\/1\",\"thumbnail_url\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\"}}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Download an attachment",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/attachments\/:id",
+                            "query": [
+                                {
+                                    "key": "thumb",
+                                    "value": "",
+                                    "description": "Return the 320px thumbnail instead.",
+                                    "disabled": true
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/v1\/attachments\/:id?thumb=",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": 17,
+                                    "description": "The ID of the attachment."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Streams the file (or redirects to a 5-minute presigned URL on S3) if the\ncaller can see the work order."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Technician",
+            "description": "",
+            "item": [
+                {
+                    "name": "My jobs",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/technician\/jobs",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/technician\/jobs"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "The caller's unfinished jobs, soonest resolution deadline first.\nCursor-paginated: follow `links.next` \/ `meta.next_cursor`, which stays\nstable while jobs are added or finished in the meantime."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":[{\"id\":1,\"number\":\"WO-2026-49491\",\"title\":\"In sit tempore voluptatem qui odio reprehenderit.\",\"description\":\"Sit aut voluptatem dolorum at repellat et dolorum deleniti. Enim numquam sit explicabo maxime reiciendis molestiae. Non quo recusandae quaerat qui ullam illo. Rerum dolorem sunt ut consectetur et.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":1,\"code\":\"ixd-65\",\"name\":\"Eve Falls Campus\",\"city\":\"Macchester\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block v8\",\"path\":\"Block v8\"},\"category\":{\"id\":1,\"name\":\"quis works\"},\"asset\":{\"id\":1,\"code\":\"AST-2784\",\"name\":\"Fire panel 14\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"},{\"id\":2,\"number\":\"WO-2026-60196\",\"title\":\"Vitae ea necessitatibus illum culpa.\",\"description\":\"Eligendi nisi adipisci ratione magni. Accusamus rerum voluptatem inventore.\",\"priority\":\"medium\",\"status\":\"open\",\"source\":\"web\",\"site\":{\"id\":4,\"code\":\"ozr-92\",\"name\":\"Bogan Flat Campus\",\"city\":\"West Josefa\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":3,\"site_id\":5,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block o0\",\"path\":\"Block o0\"},\"category\":{\"id\":3,\"name\":\"aliquid works\"},\"asset\":{\"id\":2,\"code\":\"AST-0801\",\"name\":\"Fire panel 15\"},\"sla\":{\"response_due_at\":\"2026-11-06T12:36:35+00:00\",\"resolution_due_at\":\"2026-11-07T08:36:35+00:00\",\"responded_at\":null,\"resolved_at\":null,\"closed_at\":null,\"hold_minutes\":0,\"is_response_breached\":false,\"is_resolution_breached\":false},\"resolution_note\":null,\"created_at\":\"2026-11-06T08:36:35+00:00\",\"updated_at\":\"2026-11-06T08:36:35+00:00\"}],\"links\":{\"first\":null,\"last\":null,\"prev\":null,\"next\":null},\"meta\":{\"path\":\"\\\/\",\"per_page\":20,\"next_cursor\":null,\"prev_cursor\":null}}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Sites",
+            "description": "",
+            "item": [
+                {
+                    "name": "List sites",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/sites",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/sites"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Active sites the caller can raise or work on work orders for: all for\nstaff, their client's for client users, covered sites for technicians."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":[{\"id\":1,\"code\":\"fqc-28\",\"name\":\"Eloisa Highway Campus\",\"city\":\"Bergnaumstad\",\"timezone\":\"Asia\\\/Kolkata\",\"client\":{\"id\":1,\"name\":\"Bogisich-White\"}},{\"id\":2,\"code\":\"uzs-55\",\"name\":\"Alvera Plains Campus\",\"city\":\"Willowview\",\"timezone\":\"Asia\\\/Kolkata\",\"client\":{\"id\":2,\"name\":\"Skiles, Mante and Swaniawski\"}}]}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "List a site's locations",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/sites\/:site_id\/locations",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/sites\/:site_id\/locations",
+                            "variable": [
+                                {
+                                    "id": "site_id",
+                                    "key": "site_id",
+                                    "value": 17,
+                                    "description": "The ID of the site."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Flat list ordered by path; rebuild the tree from parent_id."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":[{\"id\":1,\"site_id\":1,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block i3\",\"path\":\"Block i3\"},{\"id\":2,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block l2\",\"path\":\"Block l2\"}]}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Assets",
+            "description": "",
+            "item": [
+                {
+                    "name": "Look up a scanned QR code",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/assets\/qr\/:asset_qr_token",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/assets\/qr\/:asset_qr_token",
+                            "variable": [
+                                {
+                                    "id": "asset_qr_token",
+                                    "key": "asset_qr_token",
+                                    "value": "consequatur",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "asset",
+                                    "key": "asset",
+                                    "value": "01JAXKZ5Q8V2M9T3R7N4HC6WYD",
+                                    "description": "The qr_token: last path segment of the URL in the QR code."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "The token is the last path segment of the URL in the asset's QR code.\nReturns the asset with the open work orders the caller may see; another\nworkspace's token is a 404."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"id\":1,\"code\":\"AST-3139\",\"name\":\"Lift 11\",\"status\":\"working\",\"make\":\"Grady and Sons\",\"model\":\"M-626\",\"serial_no\":\"SN09825193\",\"installed_at\":\"2024-11-06\",\"warranty_until\":\"2027-11-06\",\"under_warranty\":true,\"site\":{\"id\":1,\"code\":\"azg-44\",\"name\":\"Weimann Mills Campus\",\"city\":\"Lake Eriberto\",\"timezone\":\"Asia\\\/Kolkata\"},\"location\":{\"id\":1,\"site_id\":2,\"parent_id\":null,\"type\":\"building\",\"name\":\"Block m2\",\"path\":\"Block m2\"},\"category\":{\"id\":1,\"name\":\"dolorem works\"}}}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Dashboard",
+            "description": "",
+            "item": [
+                {
+                    "name": "Summary",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/dashboard\/summary",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/dashboard\/summary"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Supervisors and admins. \"This month\" is the workspace's local month."
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\":{\"open\":42,\"unassigned\":6,\"in_progress\":18,\"on_hold\":3,\"breached_open\":4,\"resolved_this_month\":120,\"sla_compliance_percent\":93.3}}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "Authorization",
+                "type": "string"
+            }
+        ]
+    }
+}
