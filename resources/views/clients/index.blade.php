@@ -36,7 +36,7 @@
                                     <a href="{{ route('clients.edit', $client) }}" class="font-medium text-indigo-600 hover:text-indigo-500">Edit</a>
                                 @endcan
                                 @can('delete', $client)
-                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" onsubmit="return confirm('Delete {{ $client->name }}?')">
+                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" data-confirm="Delete {{ $client->name }}?">
                                         @csrf @method('DELETE')
                                         <button class="font-medium text-red-600 hover:text-red-500">Delete</button>
                                     </form>

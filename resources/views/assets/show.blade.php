@@ -51,7 +51,7 @@
             </x-card>
 
             @can('delete', $asset)
-                <form method="POST" action="{{ route('assets.destroy', $asset) }}" onsubmit="return confirm('Delete {{ $asset->code }}?')">
+                <form method="POST" action="{{ route('assets.destroy', $asset) }}" data-confirm="Delete {{ $asset->code }}?">
                     @csrf @method('DELETE')
                     <x-button variant="danger" class="w-full">Delete asset</x-button>
                 </form>

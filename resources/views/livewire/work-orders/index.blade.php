@@ -55,12 +55,12 @@
                 <option value="due">Due soonest</option>
             </select>
 
-            <div class="flex items-center gap-2 text-sm">
+            <div class="flex min-w-0 items-center gap-2 text-sm sm:col-span-2">
                 <label class="sr-only" for="from">From</label>
-                <input id="from" type="date" wire:model.live="from" class="w-full rounded-md border border-slate-300 px-2 py-2 text-sm">
+                <input id="from" type="date" wire:model.live="from" class="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-2 text-sm">
                 <span class="text-slate-400">–</span>
                 <label class="sr-only" for="to">To</label>
-                <input id="to" type="date" wire:model.live="to" class="w-full rounded-md border border-slate-300 px-2 py-2 text-sm">
+                <input id="to" type="date" wire:model.live="to" class="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-2 text-sm">
             </div>
 
             <div class="flex items-center justify-between gap-3">

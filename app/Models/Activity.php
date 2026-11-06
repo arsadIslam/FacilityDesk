@@ -20,6 +20,14 @@ class Activity extends SpatieActivity
 {
     use BelongsToTenant;
 
+    /**
+     * Spatie's model is fully unguarded; tenant_id only ever comes from
+     * TenantContext or the subject (see booted()).
+     *
+     * @var list<string>
+     */
+    public $guarded = ['id', 'tenant_id'];
+
     protected static function booted(): void
     {
         static::creating(function (Activity $activity): void {

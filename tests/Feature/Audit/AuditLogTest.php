@@ -88,3 +88,14 @@ it('never shows another tenant\'s entries', function () {
 it('is only for tenant admins', function (string $who) {
     $this->actingAs($this->w->{$who})->get($this->w->tenant->url('audit'))->assertForbidden();
 })->with(['supervisor', 'technician', 'clientUser']);
+
+it('shows assignees by name, not id', function () {
+    $this->actingAs($this->w->supervisor);
+    $wo = WorkOrder::factory()->forSite($this->w->site)->create();
+    app(AssignWorkOrder::class)->handle($wo, $this->w->technician, $this->w->supervisor);
+
+    Livewire::actingAs($this->w->admin)->test(Index::class)
+        ->set('log', 'work_orders')
+        ->assertSee('assignee:')
+        ->assertSee($this->w->technician->name);
+});

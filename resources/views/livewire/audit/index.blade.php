@@ -57,8 +57,14 @@
                         <td class="px-4 py-3">
                             <dl class="space-y-0.5 text-xs">
                                 @foreach ($new as $field => $value)
+                                    @php
+                                        // Show people by name rather than id.
+                                        $label = fn ($v) => $field === 'assigned_to' && $v !== null && isset($this->people[$v]) ? $this->people[$v] : $v;
+                                        $value = $label($value);
+                                        if (array_key_exists($field, $old)) { $old[$field] = $label($old[$field]); }
+                                    @endphp
                                     <div>
-                                        <dt class="inline font-medium text-slate-700">{{ str_replace('_', ' ', $field) }}:</dt>
+                                        <dt class="inline font-medium text-slate-700">{{ $field === 'assigned_to' ? 'assignee' : str_replace('_', ' ', $field) }}:</dt>
                                         <dd class="inline text-slate-600">
                                             @if (array_key_exists($field, $old))
                                                 <span class="text-slate-400 line-through">{{ is_scalar($old[$field]) ? \Illuminate\Support\Str::limit((string) $old[$field], 60) : '—' }}</span> →

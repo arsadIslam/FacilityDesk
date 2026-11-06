@@ -56,7 +56,7 @@
                                 @endcan
                                 @can('deactivate', $user)
                                     @if ($user->is_active)
-                                        <form method="POST" action="{{ route('users.deactivate', $user) }}" onsubmit="return confirm('Deactivate {{ $user->name }}?')">
+                                        <form method="POST" action="{{ route('users.deactivate', $user) }}" data-confirm="Deactivate {{ $user->name }}?">
                                             @csrf @method('PATCH')
                                             <button class="font-medium text-red-600 hover:text-red-500">Deactivate</button>
                                         </form>

@@ -9,7 +9,7 @@
 
     <form method="GET" class="mb-4 flex items-end gap-3">
         <div class="w-64">
-            <x-form.select name="site" label="Site" placeholder="All sites" :value="$siteId" :options="$sites" onchange="this.form.submit()" />
+            <x-form.select name="site" label="Site" placeholder="All sites" :value="$siteId" :options="$sites" data-autosubmit />
         </div>
         <noscript><x-button>Filter</x-button></noscript>
     </form>

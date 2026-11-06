@@ -12,7 +12,7 @@
                 @if ($canManage)
                     <div class="flex gap-3 text-xs">
                         <a href="{{ route('sites.locations.edit', [$site, $location]) }}" class="font-medium text-indigo-600 hover:text-indigo-500">Edit</a>
-                        <form method="POST" action="{{ route('sites.locations.destroy', [$site, $location]) }}" onsubmit="return confirm('Delete {{ $location->name }}?')">
+                        <form method="POST" action="{{ route('sites.locations.destroy', [$site, $location]) }}" data-confirm="Delete {{ $location->name }}?">
                             @csrf @method('DELETE')
                             <button class="font-medium text-red-600 hover:text-red-500">Delete</button>
                         </form>

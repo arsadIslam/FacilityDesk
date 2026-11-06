@@ -45,11 +45,14 @@ class DemoSeeder extends Seeder
 
     public bool $large = false;
 
-    /** @var list<string> */
+    /** @var array<string, string> title => default category */
     private const TITLES = [
-        'AC not cooling', 'Water leakage near pantry', 'Lights flickering', 'Lift stuck between floors', 'Washroom tap broken',
-        'Door access card reader down', 'Power socket sparking', 'Drain blocked', 'Ceiling tile damaged', 'CCTV camera offline',
-        'Fire exit sign not lit', 'Generator not starting', 'Glass door hinge loose', 'Pest sighting in cafeteria', 'Water dispenser leaking',
+        'AC not cooling' => 'HVAC', 'AC unit making loud noise' => 'HVAC', 'Server room too warm' => 'HVAC',
+        'Water leakage near pantry' => 'Plumbing', 'Washroom tap broken' => 'Plumbing', 'Drain blocked' => 'Plumbing', 'Water dispenser leaking' => 'Plumbing',
+        'Lights flickering' => 'Electrical', 'Power socket sparking' => 'Electrical', 'Generator not starting' => 'Electrical', 'Fire exit sign not lit' => 'Electrical',
+        'Lift stuck between floors' => 'Civil', 'Ceiling tile damaged' => 'Civil', 'Glass door hinge loose' => 'Civil',
+        'Pest sighting in cafeteria' => 'Housekeeping', 'Spill in lobby' => 'Housekeeping',
+        'Door access card reader down' => 'Security', 'CCTV camera offline' => 'Security',
     ];
 
     public function run(): void
@@ -170,12 +173,13 @@ class DemoSeeder extends Seeder
             }
         }
 
-        foreach (['AC unit', 'Water pump', 'DG set'] as $i => $assetName) {
+        foreach (['AC unit' => 'HVAC', 'Water pump' => 'Plumbing', 'DG set' => 'Electrical'] as $assetName => $categoryName) {
+            $i = array_search($assetName, ['AC unit', 'Water pump', 'DG set'], true);
             $room = $rooms[$i];
             Asset::create([
                 'site_id' => $site->id,
                 'location_id' => $room->id,
-                'category_id' => $categories->random()->id,
+                'category_id' => ($categories->firstWhere('name', $categoryName) ?? $categories->random())->id,
                 'name' => "{$assetName} {$site->code}",
                 'code' => "{$site->code}-A".($i + 1),
                 'make' => fake()->company(),
@@ -225,14 +229,15 @@ class DemoSeeder extends Seeder
                 default => mt_rand(1, max(2, (int) ($window * 0.8))),
             });
 
-            $wo = new WorkOrder(['title' => self::TITLES[array_rand(self::TITLES)], 'description' => fake()->sentence(12)]);
+            $title = array_rand(self::TITLES);
+            $wo = new WorkOrder(['title' => $title, 'description' => fake()->sentence(12)]);
             $wo->forceFill([
                 // saveQuietly() below skips the creating hook that would stamp this.
                 'tenant_id' => $tenant->id,
                 'number' => sprintf('WO-%d-%05d', $raisedAt->year, ++$number),
                 'site_id' => $site->id,
                 'location_id' => $site->locations->random()->id,
-                'category_id' => $categories->random()->id,
+                'category_id' => ($categories->firstWhere('name', self::TITLES[$title]) ?? $categories->random())->id,
                 'raised_by' => $people['supervisor']->id,
                 'priority' => $priority,
                 'status' => $status,
@@ -313,7 +318,7 @@ class DemoSeeder extends Seeder
 
         $siteLocations = Location::query()->get(['id', 'site_id'])->groupBy('site_id')->map->pluck('id')->all();
         $siteIds = array_keys($siteLocations);
-        $categoryIds = Category::query()->pluck('id')->all();
+        $categoryIds = Category::query()->pluck('id', 'name')->all();
         $technicianIds = User::query()->role(UserRole::Technician->value)->pluck('id')->all();
         $raisedBy = User::query()->role(UserRole::Supervisor->value)->value('id');
         $statuses = array_map(fn (WorkOrderStatus $s) => $s->value, WorkOrderStatus::cases());
@@ -338,10 +343,10 @@ class DemoSeeder extends Seeder
                     'number' => sprintf('WO-%d-%06d', $raised->year, ++$next),
                     'site_id' => $siteId,
                     'location_id' => $siteLocations[$siteId][array_rand($siteLocations[$siteId]->all())],
-                    'category_id' => $categoryIds[array_rand($categoryIds)],
+                    'category_id' => $categoryIds[self::TITLES[$title = array_rand(self::TITLES)]] ?? reset($categoryIds),
                     'raised_by' => $raisedBy,
                     'assigned_to' => $assigned ? $technicianIds[array_rand($technicianIds)] : null,
-                    'title' => self::TITLES[array_rand(self::TITLES)],
+                    'title' => $title,
                     'priority' => $priorities[mt_rand(0, 3)],
                     'status' => $status,
                     'source' => 'web',
