@@ -16,6 +16,7 @@
         "intervention/image": "^3.11",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.50",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
         "livewire/livewire": "^3.6",
@@ -23,6 +24,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "knuckleswtf/scribe": "^5.11",
         "larastan/larastan": "^3.14",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
@@ -84,6 +86,10 @@
         ],
         "analyse": [
             "@php vendor/bin/phpstan analyse --memory-limit=1G"
+        ],
+        "docs": [
+            "@php artisan scribe:generate",
+            "@php -r \"copy('public/docs/collection.json', 'docs/postman_collection.json'); copy('public/docs/openapi.yaml', 'docs/openapi.yaml');\""
         ]
     },
     "extra": {

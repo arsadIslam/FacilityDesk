@@ -1,0 +1,99 @@
+name: Sites
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/sites
+    metadata:
+      custom: []
+      groupName: Sites
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'List sites'
+      description: |-
+        Active sites the caller can raise or work on work orders for: all for
+        staff, their client's for client users, covered sites for technicians.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"data":[{"id":1,"code":"fqc-28","name":"Eloisa Highway Campus","city":"Bergnaumstad","timezone":"Asia\/Kolkata","client":{"id":1,"name":"Bogisich-White"}},{"id":2,"code":"uzs-55","name":"Alvera Plains Campus","city":"Willowview","timezone":"Asia\/Kolkata","client":{"id":2,"name":"Skiles, Mante and Swaniawski"}}]}'
+        headers: []
+        description: ''
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/sites/{site_id}/locations'
+    metadata:
+      custom: []
+      groupName: Sites
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: "List a site's locations"
+      description: 'Flat list ordered by path; rebuild the tree from parent_id.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      site_id:
+        custom: []
+        name: site_id
+        description: 'The ID of the site.'
+        required: true
+        example: 17
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      site_id: 17
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"data":[{"id":1,"site_id":1,"parent_id":null,"type":"building","name":"Block i3","path":"Block i3"},{"id":2,"site_id":2,"parent_id":null,"type":"building","name":"Block l2","path":"Block l2"}]}'
+        headers: []
+        description: ''
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null

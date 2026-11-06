@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Permission;
+use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\SiteFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,6 +68,28 @@ class Site extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Sites a user may raise or work on work orders for: all of them for
+     * staff who can view sites, their client's for Client Users, and the
+     * sites they cover for everyone else (technicians).
+     *
+     * @param  Builder<Site>  $query
+     */
+    public function scopeAvailableTo(Builder $query, User $user): void
+    {
+        if ($user->hasPermission(Permission::ViewSites)) {
+            return;
+        }
+
+        if ($user->hasUserRole(UserRole::ClientUser)) {
+            $query->where('client_id', $user->client_id ?? 0);
+
+            return;
+        }
+
+        $query->whereHas('coverage', fn (Builder $q) => $q->whereKey($user->id));
     }
 
     /**

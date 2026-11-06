@@ -110,3 +110,11 @@ function workOrderWorld(): stdClass
 
     return $w;
 }
+
+/**
+ * Absolute URL of an API v1 endpoint on the central domain.
+ */
+function api(string $path = ''): string
+{
+    return 'http://'.config('tenancy.domain').'/api/v1/'.ltrim($path, '/');
+}

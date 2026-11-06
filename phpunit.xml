@@ -18,6 +18,8 @@
         </include>
     </source>
     <php>
+        <!-- ~430 app boots in one process outgrow PHP's 128M CLI default. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_URL" value="http://facilitydesk.test"/>
         <env name="APP_DOMAIN" value="facilitydesk.test"/>

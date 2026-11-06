@@ -1,0 +1,71 @@
+name: Assets
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/assets/qr/{asset_qr_token}'
+    metadata:
+      custom: []
+      groupName: Assets
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Look up a scanned QR code'
+      description: |-
+        The token is the last path segment of the URL in the asset's QR code.
+        Returns the asset with the open work orders the caller may see; another
+        workspace's token is a 404.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      asset_qr_token:
+        custom: []
+        name: asset_qr_token
+        description: ''
+        required: true
+        example: consequatur
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      asset:
+        custom: []
+        name: asset
+        description: 'The qr_token: last path segment of the URL in the QR code.'
+        required: true
+        example: 01JAXKZ5Q8V2M9T3R7N4HC6WYD
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      asset_qr_token: consequatur
+      asset: 01JAXKZ5Q8V2M9T3R7N4HC6WYD
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"data":{"id":1,"code":"AST-3139","name":"Lift 11","status":"working","make":"Grady and Sons","model":"M-626","serial_no":"SN09825193","installed_at":"2024-11-06","warranty_until":"2027-11-06","under_warranty":true,"site":{"id":1,"code":"azg-44","name":"Weimann Mills Campus","city":"Lake Eriberto","timezone":"Asia\/Kolkata"},"location":{"id":1,"site_id":2,"parent_id":null,"type":"building","name":"Block m2","path":"Block m2"},"category":{"id":1,"name":"dolorem works"}}}'
+        headers: []
+        description: ''
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null

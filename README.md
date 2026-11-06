@@ -2,7 +2,7 @@
 
 Multi-tenant Facility Management SaaS: FM companies sign up as tenants, register client sites, and track every complaint as a work order with an SLA.
 
-> Status: **Phase 5 — SLA engine, scheduler, assets & QR** complete. See `.md` for the full build plan.
+> Status: **Phase 6 — REST API** complete. See `.md` for the full build plan.
 
 ## Stack
 
@@ -94,6 +94,37 @@ The mapping lives in `App\Enums\UserRole::permissions()`. After changing it, run
 - Assets belong to a site and location, with make/model/serial, install and warranty dates and a status (working, under repair, retired). Codes are unique per tenant.
 - Each asset gets a random ULID `qr_token`. Its QR code (SVG, `bacon/bacon-qr-code`) encodes `https://{tenant}.facilitydesk.test/a/{qr_token}`; a printable label can be downloaded from the asset page.
 - Scanning (login required) shows the asset and its open work orders, and **Report a problem** opens the work order form with site, location, category and asset prefilled and `source = qr`. The token is resolved through the tenant scope, so another tenant's label is a 404; client users can scan only their own client's assets.
+
+## REST API (v1)
+
+Docs: **`/docs`** (static Scribe site in `public/docs`), plus `docs/postman_collection.json` and `docs/openapi.yaml`. Regenerate with `composer docs` (point it at a scratch database: Scribe builds response examples from factories inside a rolled-back transaction).
+
+```bash
+# 1. Token (5 attempts/min per IP; same 422 for wrong workspace, email or password)
+curl -X POST http://facilitydesk.test/api/v1/auth/login \
+     -d tenant=acme -d email=tech@acme.test -d password=password -d device_name=cli
+# 2. Use it (60 requests/min per token)
+curl http://facilitydesk.test/api/v1/technician/jobs -H "Authorization: Bearer <token>"
+```
+
+| Endpoint | Who |
+|---|---|
+| `POST /auth/login`, `POST /auth/logout`, `GET /me` | everyone |
+| `GET /work-orders` (status, priority, site_id, assigned_to, from, to, per_page) | scoped by role |
+| `POST /work-orders` (multipart, `photos[]`) | client user, supervisor, admin |
+| `GET /work-orders/{id}` (history, comments, attachments, `available_transitions`) | anyone who can see it |
+| `PATCH /work-orders/{id}/assign` | supervisor, admin |
+| `PATCH /work-orders/{id}/status` | technician (assigned), supervisor, admin, client (close/reopen) |
+| `POST /work-orders/{id}/comments` · `POST /work-orders/{id}/media` | involved users · technician, supervisor |
+| `GET /technician/jobs` (cursor-paginated, soonest due first) | technician |
+| `GET /sites` · `GET /sites/{id}/locations` · `GET /assets/qr/{token}` · `GET /dashboard/summary` | scoped · scoped · scoped · supervisor, admin |
+
+Design notes:
+
+- **Tenant from the token, never the request.** The API lives on the central domain; `tenant:sanctum` resolves the bearer token's user inside `IdentifyTenant` (which runs before `auth:sanctum` because of the priority list), so every route-model binding is tenant-scoped and another tenant's id is a bare `{"message": "Not found."}` 404 that never names a model.
+- **Same rules as the web.** API Form Requests reuse `WorkOrderRules` and `AttachmentRules`; controllers call the same Actions (`CreateWorkOrder`, `ChangeStatus`, …), so web and API cannot drift.
+- **Errors** are always JSON (`shouldRenderJsonWhen`), even without an `Accept` header: `{ "message", "errors" }` with 401/403/404/422/429.
+- Tokens are bearer-only (Sanctum's session fallback is off) and expire after 30 days (`SANCTUM_EXPIRATION`, minutes); deactivated users' tokens are refused.
 
 ## Local setup
 
