@@ -2,7 +2,7 @@
 
 Multi-tenant Facility Management SaaS: FM companies sign up as tenants, register client sites, and track every complaint as a work order with an SLA.
 
-> Status: **Phase 6 — REST API** complete. See `.md` for the full build plan.
+> Status: **Phase 7 — Dashboard, reports, audit, performance** complete. See `.md` for the full build plan.
 
 ## Stack
 
@@ -126,6 +126,37 @@ Design notes:
 - **Errors** are always JSON (`shouldRenderJsonWhen`), even without an `Accept` header: `{ "message", "errors" }` with 401/403/404/422/429.
 - Tokens are bearer-only (Sanctum's session fallback is off) and expire after 30 days (`SANCTUM_EXPIRATION`, minutes); deactivated users' tokens are refused.
 
+## Dashboard, reports and audit
+
+- **Dashboard** (`App\Livewire\Dashboard`): open now, breached, raised/closed in the period, resolution and response SLA %, jobs per technician, top categories; filter by site and date range (tenant's local days). Technicians and client users get a personal summary instead.
+- **Caching:** `DashboardStats` caches per tenant and filter for 5 minutes. Any work order event rotates a per-tenant cache version (`BustDashboardCache`, run inline because it is a single cache write), so every filter combination expires at once on any cache store, without needing Redis tags.
+- **Monthly reports:** one PDF (dompdf) and one Excel file (Laravel Excel) per client, generated as a `Bus::batch()` of `GenerateMonthlyReport` jobs on the `reports` queue. The Reports page shows batch progress (polling only while running) and signed, authorised download links. `reports:monthly` runs hourly but acts for a tenant only once it is the 1st in that tenant's timezone; it is idempotent. Excel cells starting with `= + - @` are escaped against formula injection.
+- **Audit log:** spatie/laravel-activitylog on work orders (who changed status, assignee, priority, …) and users (profile, active), plus explicit role-change entries (roles live in a pivot table the model log cannot see). Entries carry `tenant_id` (from the subject when written by a worker), and Tenant Admins can filter by area, event, person, date and text at `/audit`. Passwords and system columns (SLA flags, due dates) are never logged.
+
+## Performance
+
+`php artisan demo:seed --large` adds 50,000 work orders to the `acme` workspace (bulk inserts, about 8 s); `php artisan app:benchmark` runs the real list query (`App\Queries\WorkOrderListQuery`, shared by the Livewire list and the API) and the uncached dashboard 15 times each and reports the median and the number of SQL statements.
+
+Measured on MariaDB 10.4 / PHP 8.2 on a MacBook, 50,150 work orders in the tenant:
+
+| Scenario | Before | After | Queries |
+|---|---:|---:|---:|
+| List: newest first, page 1 | 69.4 ms | 27.8 ms | 7 |
+| List: newest first, page 100 | 76.8 ms | 29.6 ms | 7 |
+| List: SLA breached only | 77.8 ms | 36.5 ms | 7 |
+| List: search by title | 91.4 ms | 23.4 ms | 7 |
+| List: status / one site / number search | 6.1 / 5.3 / 1.8 ms | 5.1 / 6.2 / 2.0 ms | 7 |
+| Technician: my jobs (cursor) | 4.1 ms | 4.7 ms | 6 |
+| Dashboard, uncached (5-min cache otherwise) | 322.3 ms | 91.7 ms | 11 → 12 |
+
+What changed (migration `add_performance_indexes_to_work_orders`, from `EXPLAIN`):
+
+- `(tenant_id, created_at)`: the default newest-first list was a **filesort over every row of the tenant**; it now walks the index. Most of the remaining ~28 ms is pagination's `count(*)`, the price of showing "page x of y".
+- `(tenant_id, resolved_at | closed_at | responded_at)`: the dashboard's and reports' period counts were full scans.
+- `FULLTEXT(title)` on MySQL with boolean-mode word prefixes (`leak` finds "leakage"); a full number is an exact lookup on the unique index; SQLite keeps `LIKE`.
+- The per-technician breakdown was one conditional-sum scan over every assigned work order; it is now two grouped queries that each use an index.
+- **No N+1:** query counts stay constant regardless of page size (tested), and `Model::preventLazyLoading()` throws on any lazy load outside production.
+
 ## Local setup
 
 ### With Sail (recommended)
@@ -146,6 +177,14 @@ Add to `/etc/hosts` (one line per tenant you create):
 ```
 
 Open <http://facilitydesk.test/signup>.
+
+### Demo data
+
+```bash
+php artisan demo:seed            # acme + globex; admin@ / supervisor@ / tech@ / client@acme.test, password "password"
+php artisan demo:seed --large    # + 50,000 work orders for benchmarking (php artisan app:benchmark)
+php artisan demo:seed --fresh    # wipe the database first
+```
 
 ### Without Docker
 

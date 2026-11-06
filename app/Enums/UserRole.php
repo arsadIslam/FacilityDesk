@@ -60,6 +60,7 @@ enum UserRole: string
                 Permission::ViewCategories,
                 Permission::ViewSlaPolicies,
                 Permission::ViewAssets,
+                Permission::ViewReports,
                 Permission::ViewAllWorkOrders,
                 Permission::CreateWorkOrders,
                 Permission::AssignWorkOrders,

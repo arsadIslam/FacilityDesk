@@ -7,14 +7,16 @@ use App\Http\Controllers\Web\Auth\LoginController;
 use App\Http\Controllers\Web\Auth\PasswordResetController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\ClientController;
-use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\InvitationController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\SiteController;
 use App\Http\Controllers\Web\SiteCoverageController;
 use App\Http\Controllers\Web\SlaPolicyController;
 use App\Http\Controllers\Web\TenantSignupController;
 use App\Http\Controllers\Web\UserController;
+use App\Livewire\Dashboard;
+use App\Livewire\Reports\Index;
 use App\Livewire\WorkOrders;
 use Illuminate\Support\Facades\Route;
 
@@ -76,7 +78,7 @@ Route::domain('{tenant}.'.config('tenancy.domain'))
                 ->name('verification.send');
 
             Route::middleware('verified')->group(function () {
-                Route::get('/', DashboardController::class)->name('dashboard');
+                Route::get('/', Dashboard::class)->name('dashboard');
 
                 Route::get('/work-orders', WorkOrders\Index::class)->name('work-orders.index');
                 Route::get('/work-orders/create', WorkOrders\Create::class)->name('work-orders.create');
@@ -106,6 +108,14 @@ Route::domain('{tenant}.'.config('tenancy.domain'))
                 Route::get('/a/{asset:qr_token}', [AssetController::class, 'scan'])->name('assets.scan');
 
                 Route::resource('categories', CategoryController::class)->except(['show', 'destroy']);
+
+                Route::get('/reports', Index::class)->name('reports.index');
+                Route::get('/reports/{report}/{format}', [ReportController::class, 'download'])
+                    ->whereIn('format', ['pdf', 'xlsx'])
+                    ->middleware('signed')
+                    ->name('reports.download');
+
+                Route::get('/audit', App\Livewire\Audit\Index::class)->name('audit.index');
 
                 Route::get('/sla-policies', [SlaPolicyController::class, 'index'])->name('sla-policies.index');
                 Route::put('/sla-policies/{slaPolicy}', [SlaPolicyController::class, 'update'])->name('sla-policies.update');

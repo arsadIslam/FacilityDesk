@@ -11,10 +11,8 @@ use App\Models\Category;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\WorkOrder;
-use App\Services\TenantContext;
+use App\Queries\WorkOrderListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -89,19 +87,18 @@ final class Index extends Component
     #[Computed]
     public function workOrders(): LengthAwarePaginator
     {
-        $query = WorkOrder::query()
-            ->visibleTo($this->user())
-            ->with(['site', 'location', 'category', 'assignee']);
-
-        $this->applyFilters($query);
-
-        $sortByDue = $this->sort === 'due' || ($this->sort === '' && $this->user()->hasUserRole(UserRole::Technician));
-
-        $sortByDue
-            ? $query->orderBy('resolution_due_at')->orderBy('id')
-            : $query->latest('created_at')->latest('id');
-
-        return $query->paginate(20);
+        return app(WorkOrderListQuery::class)->build($this->user(), [
+            'search' => $this->search,
+            'status' => $this->status,
+            'priority' => $this->priority,
+            'site_id' => $this->siteId,
+            'category_id' => $this->categoryId,
+            'assigned_to' => $this->assigneeId,
+            'from' => $this->from,
+            'to' => $this->to,
+            'breached' => $this->breached,
+            'sort' => $this->sort,
+        ])->paginate(20);
     }
 
     /**
@@ -144,42 +141,6 @@ final class Index extends Component
             'priorities' => Priority::cases(),
             'canFilterByAssignee' => ! $this->user()->hasUserRole(UserRole::Technician, UserRole::ClientUser),
         ]);
-    }
-
-    /**
-     * @param  Builder<WorkOrder>  $query
-     */
-    private function applyFilters(Builder $query): void
-    {
-        $search = trim($this->search);
-
-        $query
-            ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $q) => $q
-                ->where('number', 'like', '%'.$search.'%')
-                ->orWhere('title', 'like', '%'.$search.'%')))
-            ->when(WorkOrderStatus::tryFrom($this->status), fn (Builder $q, WorkOrderStatus $status) => $q->where('status', $status->value))
-            ->when(Priority::tryFrom($this->priority), fn (Builder $q, Priority $priority) => $q->where('priority', $priority->value))
-            ->when(ctype_digit($this->siteId), fn (Builder $q) => $q->where('site_id', (int) $this->siteId))
-            ->when(ctype_digit($this->categoryId), fn (Builder $q) => $q->where('category_id', (int) $this->categoryId))
-            ->when(ctype_digit($this->assigneeId), fn (Builder $q) => $q->where('assigned_to', (int) $this->assigneeId))
-            ->when($this->date($this->from), fn (Builder $q, Carbon $from) => $q->where('created_at', '>=', $from->startOfDay()->utc()))
-            ->when($this->date($this->to), fn (Builder $q, Carbon $to) => $q->where('created_at', '<=', $to->endOfDay()->utc()))
-            ->when($this->breached, fn (Builder $q) => $q->breached());
-    }
-
-    /**
-     * A Y-m-d filter value as a date in the tenant's timezone, or null if invalid.
-     */
-    private function date(string $value): ?Carbon
-    {
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-            return null;
-        }
-
-        $timezone = app(TenantContext::class)->tenant()->timezone ?? 'UTC';
-        $date = Carbon::createFromFormat('Y-m-d', $value, $timezone);
-
-        return $date instanceof Carbon ? $date : null;
     }
 
     private function user(): User

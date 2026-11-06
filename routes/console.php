@@ -23,3 +23,10 @@ Schedule::command('digest:daily')
     ->hourly()
     ->withoutOverlapping()
     ->onOneServer();
+
+// Hourly, but each tenant only acts once it is the 1st in its own timezone;
+// generation is idempotent, so later hours that day are no-ops.
+Schedule::command('reports:monthly')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer();

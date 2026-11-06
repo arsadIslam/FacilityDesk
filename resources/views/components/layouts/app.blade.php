@@ -10,6 +10,8 @@
         ['label' => 'Categories', 'route' => 'categories.index', 'active' => 'categories.*', 'can' => ['viewAny', App\Models\Category::class]],
         ['label' => 'SLA policies', 'route' => 'sla-policies.index', 'active' => 'sla-policies.*', 'can' => ['viewAny', App\Models\SlaPolicy::class]],
         ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'can' => ['viewAny', App\Models\User::class]],
+        ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'can' => ['viewAny', App\Models\Report::class]],
+        ['label' => 'Audit', 'route' => 'audit.index', 'active' => 'audit.*', 'permission' => App\Enums\Permission::ViewAuditLog],
     ];
     $tenant = app(App\Services\TenantContext::class)->tenant();
 @endphp
@@ -32,7 +34,7 @@
                 </a>
                 <nav class="flex flex-wrap gap-1 text-sm">
                     @foreach ($nav as $item)
-                        @if ($item['can'] === null || auth()->user()->can(...$item['can']))
+                        @if (isset($item['permission']) ? auth()->user()->hasPermission($item['permission']) : ($item['can'] === null || auth()->user()->can(...$item['can'])))
                             <a href="{{ route($item['route']) }}"
                                @class([
                                    'rounded-md px-3 py-1.5 font-medium',

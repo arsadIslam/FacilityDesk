@@ -21,13 +21,12 @@ use App\Models\Category;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\WorkOrder;
-use App\Services\TenantContext;
+use App\Queries\WorkOrderListQuery;
 use App\Support\WorkOrderRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Knuckles\Scribe\Attributes\Authenticated;
 use Knuckles\Scribe\Attributes\Group;
@@ -47,23 +46,12 @@ final class WorkOrderController extends Controller
      * assigned jobs for technicians, their client's work orders for client users.
      */
     #[ResponseFromApiResource(WorkOrderResource::class, WorkOrder::class, collection: true, paginate: 20, with: self::LIST_RELATIONS)]
-    public function index(IndexWorkOrdersRequest $request, TenantContext $context): AnonymousResourceCollection
+    public function index(IndexWorkOrdersRequest $request, WorkOrderListQuery $list): AnonymousResourceCollection
     {
         /** @var User $user */
         $user = $request->user();
-        $timezone = $context->tenant()->timezone ?? 'UTC';
 
-        $workOrders = WorkOrder::query()
-            ->visibleTo($user)
-            ->with(self::LIST_RELATIONS)
-            ->when($request->validated('status'), fn ($q, string $status) => $q->where('status', $status))
-            ->when($request->validated('priority'), fn ($q, string $priority) => $q->where('priority', $priority))
-            ->when($request->validated('site_id'), fn ($q, $id) => $q->where('site_id', (int) $id))
-            ->when($request->validated('assigned_to'), fn ($q, $id) => $q->where('assigned_to', (int) $id))
-            ->when($request->validated('from'), fn ($q, string $from) => $q->where('created_at', '>=', Carbon::parse($from, $timezone)->startOfDay()->utc()))
-            ->when($request->validated('to'), fn ($q, string $to) => $q->where('created_at', '<=', Carbon::parse($to, $timezone)->endOfDay()->utc()))
-            ->latest()
-            ->latest('id')
+        $workOrders = $list->build($user, [...$request->safe()->only(['status', 'priority', 'site_id', 'assigned_to', 'from', 'to']), 'sort' => 'newest'])
             ->paginate($request->integer('per_page', 20) ?: 20)
             ->withQueryString();
 

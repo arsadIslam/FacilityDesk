@@ -10,6 +10,7 @@ use App\Models\Attachment;
 use App\Models\Category;
 use App\Models\Client;
 use App\Models\Location;
+use App\Models\Report;
 use App\Models\Site;
 use App\Models\SlaPolicy;
 use App\Models\Tenant;
@@ -75,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
             'work_order_comment' => WorkOrderComment::class,
             'attachment' => Attachment::class,
             'asset' => Asset::class,
+            'report' => Report::class,
         ]);
 
         $this->configureAuthLinks();
